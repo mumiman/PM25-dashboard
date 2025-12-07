@@ -4,6 +4,7 @@ import { TrendChart } from './components/TrendChart';
 import { SeasonalChart } from './components/SeasonalChart';
 import { HealthChart, HDCData } from './components/HealthChart'; // Import
 import { Heatmap } from './components/Heatmap';
+import { DailyHeatmap } from './components/DailyHeatmap';
 import { StationSelector } from './components/StationSelector';
 
 // Types matching our JSON structure
@@ -122,6 +123,22 @@ function App() {
   const avgLevel = stationData.length > 0 
     ? (stationData.reduce((acc, curr) => acc + curr.value, 0) / stationData.length).toFixed(1)
     : 0;
+
+  // Available Data Years for Heatmap
+  const availableYears = stationData.length > 0
+    ? Array.from(new Set(stationData.map(d => new Date(d.date).getFullYear()))).sort((a, b) => b - a)
+    : [2025];
+    
+  // Default to latest year if available, otherwise 2025
+  const [heatmapYear, setHeatmapYear] = useState<number>(2025);
+  
+  // Update heatmap year when station changes if logic needed, but keeping user selection is usually fine.
+  // Optionally reset to max year on station change:
+  useEffect(() => {
+     if (availableYears.length > 0 && !availableYears.includes(heatmapYear)) {
+         setHeatmapYear(availableYears[0]);
+     }
+  }, [selectedStation, availableYears, heatmapYear]);
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -287,6 +304,22 @@ function App() {
                </div>
             </div>
             <Heatmap data={stationData} title="" />
+            
+            <div className="mt-8">
+               <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-md font-semibold text-slate-700">Daily Intensity</h4>
+                  <select
+                     className="block w-24 pl-3 pr-8 py-1 text-sm border-slate-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-md shadow-sm border"
+                     value={heatmapYear}
+                     onChange={(e) => setHeatmapYear(Number(e.target.value))}
+                  >
+                     {availableYears.map(y => (
+                        <option key={y} value={y}>{y}</option>
+                     ))}
+                  </select>
+               </div>
+               <DailyHeatmap data={stationData} year={heatmapYear} />
+            </div>
             <p className="text-xs text-slate-400 mt-2 italic text-center">
               * Darker red indicates higher PM2.5 concentration.
             </p>
