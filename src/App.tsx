@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { LayoutDashboard, Calendar, Activity, Info } from 'lucide-react';
 import { TrendChart } from './components/TrendChart';
 import { SeasonalChart } from './components/SeasonalChart';
+import { HealthChart, HDCData } from './components/HealthChart'; // Import
 import { Heatmap } from './components/Heatmap';
 import { StationSelector } from './components/StationSelector';
 
@@ -20,6 +21,7 @@ interface PM25Data {
 
 function App() {
   const [data, setData] = useState<PM25Data | null>(null);
+  const [hdcData, setHdcData] = useState<HDCData | null>(null); // New State
   const [selectedStation, setSelectedStation] = useState<string>('');
   const [selectedProvince, setSelectedProvince] = useState<string>('All');
   const [selectedRegion, setSelectedRegion] = useState<string>('All');
@@ -27,6 +29,7 @@ function App() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Fetch PM2.5 Data
     fetch('/data/pm25_consolidated.json')
       .then(res => {
         if (!res.ok) throw new Error("Failed to load data");
@@ -45,6 +48,12 @@ function App() {
         setError(err.message);
         setLoading(false);
       });
+      
+    // Fetch HDC Data
+    fetch('/data/hdc_consolidated.json')
+      .then(res => res.json())
+      .then((json: HDCData) => setHdcData(json))
+      .catch(err => console.error("Failed to load HDC data", err));
   }, []);
 
   const stationData = data && selectedStation ? data.data[selectedStation] : [];
@@ -258,6 +267,13 @@ function App() {
             <TrendChart data={stationData} stationId={selectedStation} />
             <SeasonalChart data={stationData} stationId={selectedStation} />
           </div>
+
+          {/* Health Correlation Chart */}
+          <HealthChart 
+             pm25Data={stationData} 
+             province={data?.metadata.stationProvinces?.[selectedStation] || 'Unknown'} 
+             hdcData={hdcData}
+          />
 
           <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
              <div className="flex items-center justify-between mb-4">
