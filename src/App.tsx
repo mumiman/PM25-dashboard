@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { LayoutDashboard, Calendar, Activity, Info } from 'lucide-react';
 import { TrendChart } from './components/TrendChart';
+import { SeasonalChart } from './components/SeasonalChart';
 import { Heatmap } from './components/Heatmap';
 import { StationSelector } from './components/StationSelector';
 
@@ -136,13 +137,13 @@ function App() {
                 <Activity size={20} />
               </div>
               <div>
-                <h1 className="text-xl font-bold tracking-tight text-slate-900">AirGuard Analytics</h1>
-                <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">PM 2.5 Executive Dashboard</p>
+                <h1 className="text-xl font-bold tracking-tight text-slate-900">R6 - PM2.5 Analytics</h1>
+                <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Office of Disease Prevention and Control Region 6 Chonburi</p>
               </div>
             </div>
             <div className="flex items-center gap-4">
               <div className="text-sm text-slate-500 text-right hidden sm:block">
-                <div>Data Source: PM2.5 Monitoring Network</div>
+                <div>Data from Air4Thai กรมควบคุมมลพิษ</div>
                 <div className="text-xs">Last Updated: {data?.metadata.maxDate}</div>
               </div>
             </div>
@@ -253,35 +254,31 @@ function App() {
 
         {/* Charts Section */}
         <div className="space-y-8">
-          <section>
-            <div className="flex items-center justify-between mb-4">
-               <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                 <Activity className="text-indigo-500" size={20} />
-                 Trend Analysis
-               </h3>
-            </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <TrendChart data={stationData} stationId={selectedStation} />
-          </section>
+            <SeasonalChart data={stationData} stationId={selectedStation} />
+          </div>
 
-          <section>
-            <div className="flex items-center justify-between mb-4">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+             <div className="flex items-center justify-between mb-4">
                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                  <Calendar className="text-indigo-500" size={20} />
                  Seasonality Matrix
                </h3>
-               <button className="text-sm text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1">
-                 <Info size={14} /> Guide
-               </button>
+               <div className="flex items-center gap-2 text-sm text-slate-500">
+                  <Info size={14} />
+                  <span>Monthly Average Concentration</span>
+               </div>
             </div>
-            <Heatmap data={stationData} title="Monthly Concentration Heatmap" />
-            <p className="text-xs text-slate-500 mt-2 italic text-center">
-              * Values represent monthly averages. Darker red indicates higher PM2.5 concentration.
+            <Heatmap data={stationData} title="" />
+            <p className="text-xs text-slate-400 mt-2 italic text-center">
+              * Darker red indicates higher PM2.5 concentration.
             </p>
-          </section>
+          </div>
         </div>
         
         <footer className="mt-12 text-center text-slate-400 text-sm pb-8">
-          &copy; 2025 AirGuard Analytics • Environmental Epidemiology Unit
+          &copy; 2025 R6 - PM2.5 Analytics • Made by Suppasit Srisaeng with Google Antigravity
         </footer>
       </main>
     </div>
