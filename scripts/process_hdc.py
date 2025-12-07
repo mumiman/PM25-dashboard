@@ -38,29 +38,43 @@ def process_hdc_data():
         filename = os.path.basename(file_path)
         print(f"Processing {filename}...")
         
-        # Parse filename: e.g., "ชลบุรี_2568.csv"
-        # 2568 BE = 2025 AD
+        # Parse filename
+        # Expected formats: "Province_2568.csv", "Province_2567.csv", "Province_2567csv.csv"
+        # 2567 BE = 2024 AD, 2568 BE = 2025 AD
+        
         try:
-            name_part = filename.replace(".csv", "")
-            province, year_be = name_part.split("_")
-            year_ad = int(year_be) - 543
-        except ValueError:
-            print(f"Skipping {filename}: Invalid format")
+            # Clean up known typos first
+            clean_name = filename.replace("csv.csv", ".csv")
+            name_part = clean_name.replace(".csv", "")
+            
+            # Split by last underscore to separate province and year
+            if "_" in name_part:
+                province = name_part.rsplit("_", 1)[0]
+                year_part = name_part.rsplit("_", 1)[1]
+                # Extract just the year digits
+                year_be = int(re.search(r'\d{4}', year_part).group())
+                year_ad = year_be - 543
+            else:
+                 print(f"Skipping {filename}: No underscore found")
+                 continue
+
+        except Exception as e:
+            print(f"Skipping {filename}: Parsing name failed ({e})")
             continue
             
-        # We only care about 2025 for now as the user requested "latest year" comparison, 
-        # and checking the file list, they are all 2568.
-        
         try:
             df = pd.read_csv(file_path)
         except Exception as e:
             print(f"Error reading {filename}: {e}")
             continue
 
-        # Initialize province data structure
+        # Initialize province data structure if needed
         if province not in consolidated_data:
-            consolidated_data[province] = {
-                "year": year_ad,
+            consolidated_data[province] = {}
+            
+        # Initialize Year structure
+        if year_ad not in consolidated_data[province]:
+             consolidated_data[province][year_ad] = {
                 "weeks": list(range(1, 54)), # Weeks 1-53
                 "diseases": {
                     "Respiratory": [0] * 53,
@@ -69,7 +83,9 @@ def process_hdc_data():
                     "Total": [0] * 53
                 }
             }
-            
+
+        target_data = consolidated_data[province][year_ad]
+
         # Process rows
         for _, row in df.iterrows():
             group_name = str(row['group_name']).strip()
@@ -81,22 +97,14 @@ def process_hdc_data():
                     category = cat
                     break
             
-            # If not in our interested list, we might skip or put in "Other"? 
-            # For now, let's only aggregate what we defined to keep charts clean.
             if not category:
-                # Optionally check if we want to track everything? 
-                # Let's stick to the mapped groups for clarity as requested "ICD-10 related to PM 2.5"
                 continue
-                
-            # Extract weekly data (cols w_01_m to w_53_m)
-            # Note: CSV columns might handle w_01_m ...
-            # Let's double check column naming from previous view_file: "w_01_m", "w_02_m", ...
             
             for week in range(1, 54):
                 col_name = f"w_{week:02d}_m"
                 if col_name in df.columns:
                     val = row[col_name]
-                    # Handle non-numeric (nulls or strings with commas)
+                    # Handle non-numeric
                     try:
                         if pd.isna(val):
                             val = 0
@@ -108,9 +116,9 @@ def process_hdc_data():
                         val = 0
                         
                     # Add to Category
-                    consolidated_data[province]["diseases"][category][week-1] += val
+                    target_data["diseases"][category][week-1] += val
                     # Add to Total
-                    consolidated_data[province]["diseases"]["Total"][week-1] += val
+                    target_data["diseases"]["Total"][week-1] += val
 
     # Convert to list/dict structure suitable for JSON
     output = {

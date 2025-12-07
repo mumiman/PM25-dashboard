@@ -23,11 +23,10 @@ interface HDCData {
         source: string;
         groups: string[];
     };
-    data: Record<string, {
-        year: number;
+    data: Record<string, Record<number, { // Province -> Year -> Data
         weeks: number[];
         diseases: Record<string, number[]>;
-    }>;
+    }>>;
 }
 
 interface HealthChartProps {
@@ -64,21 +63,22 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 export function HealthChart({ pm25Data, province, hdcData }: HealthChartProps) {
     const [selectedDisease, setSelectedDisease] = useState<string>('Total');
+    const [selectedYear, setSelectedYear] = useState<number>(2025);
 
     const chartData = useMemo(() => {
-        if (!hdcData || !hdcData.data[province] || !pm25Data || pm25Data.length === 0) return [];
+        // Validate Data Availability
+        if (!hdcData || !hdcData.data[province] || !hdcData.data[province][selectedYear] || !pm25Data || pm25Data.length === 0) return [];
         
-        const provinceHDC = hdcData.data[province];
+        const yearHDC = hdcData.data[province][selectedYear];
         
-        // Calculate Weekly PM2.5 for 2025 (matching HDC data year)
-        // Group daily pm25 data by week number
+        // Calculate Weekly PM2.5 for Selected Year
         const weeklyPM25: Record<number, number[]> = {};
         for (let i = 1; i <= 53; i++) weeklyPM25[i] = [];
 
         pm25Data.forEach(d => {
             const date = parseISO(d.date);
             const year = getYear(date);
-            if (year === provinceHDC.year) { // 2025
+            if (year === selectedYear) { 
                  const week = getISOWeek(date);
                  if (weeklyPM25[week]) {
                      weeklyPM25[week].push(d.value);
@@ -87,14 +87,14 @@ export function HealthChart({ pm25Data, province, hdcData }: HealthChartProps) {
         });
 
         const data = [];
-        for (let i = 0; i < 53; i++) { // Weeks 1-53 (0-indexed array match)
+        for (let i = 0; i < 53; i++) { // Weeks 1-53
              const weekNum = i + 1;
              const pm25Vals = weeklyPM25[weekNum];
              const avgPM25 = pm25Vals.length > 0 
                 ? pm25Vals.reduce((a, b) => a + b, 0) / pm25Vals.length 
                 : null;
              
-             const diseaseCounts = provinceHDC.diseases[selectedDisease];
+             const diseaseCounts = yearHDC.diseases[selectedDisease];
              const caseCount = diseaseCounts ? diseaseCounts[i] : null;
 
              if (avgPM25 !== null || caseCount !== null) {
@@ -106,9 +106,9 @@ export function HealthChart({ pm25Data, province, hdcData }: HealthChartProps) {
              }
         }
         return data;
-    }, [pm25Data, province, hdcData, selectedDisease]);
+    }, [pm25Data, province, hdcData, selectedDisease, selectedYear]);
 
-    if (!hdcData) return null; // Don't render if no HDC data loaded globally
+    if (!hdcData) return null; 
     
     // Check if province data exists
     if (!hdcData.data[province]) {
@@ -119,6 +119,10 @@ export function HealthChart({ pm25Data, province, hdcData }: HealthChartProps) {
          );
     }
 
+    // Check if we have data for the *default* year, if not switch? 
+    // Or just let user switch. But better to indicate available years.
+    const availableYears = Object.keys(hdcData.data[province]).map(Number).sort((a,b) => b-a); // Descending
+
     return (
         <div className="w-full h-[400px] bg-white p-4 rounded-xl shadow-sm border border-slate-100">
              <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -127,16 +131,28 @@ export function HealthChart({ pm25Data, province, hdcData }: HealthChartProps) {
                     <p className="text-xs text-slate-500">Correlating Weekly PM2.5 vs Patient Diagnosis (HDC)</p>
                 </div>
                 
-                <select 
-                    className="block w-48 pl-3 pr-10 py-1 text-sm border-slate-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-md shadow-sm border"
-                    value={selectedDisease}
-                    onChange={(e) => setSelectedDisease(e.target.value)}
-                >
-                    <option value="Total">Total Cases</option>
-                    {hdcData.metadata.groups.map(g => (
-                        <option key={g} value={g}>{g}</option>
-                    ))}
-                </select>
+                <div className="flex items-center gap-2">
+                    <select 
+                        className="block w-24 pl-3 pr-8 py-1 text-sm border-slate-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-md shadow-sm border"
+                        value={selectedYear}
+                        onChange={(e) => setSelectedYear(Number(e.target.value))}
+                    >
+                        {availableYears.map(y => (
+                            <option key={y} value={y}>{y}</option>
+                        ))}
+                    </select>
+
+                    <select 
+                        className="block w-40 pl-3 pr-8 py-1 text-sm border-slate-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-md shadow-sm border"
+                        value={selectedDisease}
+                        onChange={(e) => setSelectedDisease(e.target.value)}
+                    >
+                        <option value="Total">Total Cases</option>
+                        {hdcData.metadata.groups.map(g => (
+                            <option key={g} value={g}>{g}</option>
+                        ))}
+                    </select>
+                </div>
             </div>
 
             <ResponsiveContainer width="100%" height="100%">
@@ -154,7 +170,7 @@ export function HealthChart({ pm25Data, province, hdcData }: HealthChartProps) {
                     {/* Left Axis: PM2.5 */}
                     <YAxis 
                         yAxisId="left"
-                        label={{ value: 'PM2.5 (avg)', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle', fill: '#ef4444', fontSize: 12 } }}
+                        label={{ value: `PM2.5 (avg) ${selectedYear}`, angle: -90, position: 'insideLeft', style: { textAnchor: 'middle', fill: '#ef4444', fontSize: 12 } }}
                         tick={{ fill: '#ef4444', fontSize: 12 }}
                     />
                     
