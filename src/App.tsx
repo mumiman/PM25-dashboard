@@ -10,6 +10,9 @@ interface PM25Data {
     minDate: string;
     maxDate: string;
     stations: string[];
+    stationNames?: Record<string, string>;
+    stationProvinces?: Record<string, string>;
+    stationRegions?: Record<string, string>;
   };
   data: Record<string, { date: string; value: number }[]>;
 }
@@ -17,6 +20,8 @@ interface PM25Data {
 function App() {
   const [data, setData] = useState<PM25Data | null>(null);
   const [selectedStation, setSelectedStation] = useState<string>('');
+  const [selectedProvince, setSelectedProvince] = useState<string>('All');
+  const [selectedRegion, setSelectedRegion] = useState<string>('All');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,7 +47,66 @@ function App() {
   }, []);
 
   const stationData = data && selectedStation ? data.data[selectedStation] : [];
+  const stationName = data?.metadata.stationNames?.[selectedStation] || selectedStation;
+  const stationProvince = data?.metadata.stationProvinces?.[selectedStation] || 'Unknown';
+  const stationRegion = data?.metadata.stationRegions?.[selectedStation] || 'Unknown';
   
+  // 1. Get unique Regions (numeric sort)
+  const regions = data?.metadata.stationRegions
+    ? Array.from(new Set(Object.values(data.metadata.stationRegions))).sort((a,b) => {
+        // Sort by region number "เขตสุขภาพที่ X"
+        const numA = parseInt(a.replace(/\D/g, '')) || 999;
+        const numB = parseInt(b.replace(/\D/g, '')) || 999;
+        return numA - numB;
+    })
+    : [];
+    
+  // 2. Filter Provinces based on Selected Region
+  const filteredProvinces = data?.metadata.stationProvinces 
+    ? Array.from(new Set(
+        Object.entries(data.metadata.stationProvinces)
+          .filter(([station]) => {
+            if (selectedRegion === 'All') return true;
+            return data.metadata.stationRegions?.[station] === selectedRegion;
+          })
+          .map(([_, prov]) => prov)
+      )).sort()
+    : [];
+
+  // 3. Filter Stations based on Selected Region AND Selected Province
+  const filteredStations = data?.metadata.stations.filter(s => {
+    let matchRegion = true;
+    let matchProvince = true;
+
+    if (selectedRegion !== 'All') {
+      matchRegion = data.metadata.stationRegions?.[s] === selectedRegion;
+    }
+    
+    if (selectedProvince !== 'All') {
+      matchProvince = data.metadata.stationProvinces?.[s] === selectedProvince;
+    }
+
+    return matchRegion && matchProvince;
+  }) || [];
+
+  // Reset Province if Region changes and selected province is not in that region
+  useEffect(() => {
+    if (selectedRegion !== 'All' && selectedProvince !== 'All') {
+        // Check if current province belongs to this region.
+        // We can check if filteredProvinces contains the selectedProvince
+        if (!filteredProvinces.includes(selectedProvince)) {
+            setSelectedProvince('All');
+        }
+    }
+  }, [selectedRegion, selectedProvince, filteredProvinces]);
+
+  // Use Effect to reset station if filtered out
+  useEffect(() => {
+    if (filteredStations.length > 0 && !filteredStations.includes(selectedStation)) {
+      setSelectedStation(filteredStations[0]);
+    }
+  }, [filteredStations, selectedStation]);
+
   // Calculate specific stats for the cards
   const currentLevel = stationData.length > 0 ? stationData[stationData.length - 1].value : 0;
   const avgLevel = stationData.length > 0 
@@ -92,13 +156,58 @@ function App() {
         {/* Controls Header */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
           <div>
-            <h2 className="text-2xl font-bold text-slate-800">Station Overview</h2>
+            <div className="flex items-center gap-2 mb-1">
+               <span className="px-2 py-0.5 rounded text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
+                 {stationRegion}
+               </span>
+               <span className="px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                 {stationProvince}
+               </span>
+            </div>
+            <h2 className="text-2xl font-bold text-slate-800">
+               {selectedStation} - {stationName !== selectedStation ? stationName : 'Unknown Station'}
+            </h2>
             <p className="text-slate-500 mt-1">Deep dive analysis of particulate matter trends and seasonality.</p>
           </div>
-          <div className="flex items-end gap-2">
+          
+          <div className="flex items-end gap-2 flex-wrap">
+            {/* Region Filter */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Health Region</label>
+              <select 
+                className="block w-40 pl-3 pr-10 py-2 text-base border-slate-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm border"
+                value={selectedRegion}
+                onChange={(e) => {
+                    setSelectedRegion(e.target.value);
+                    setSelectedProvince('All'); // Reset province on region change explicitly
+                }}
+              >
+                <option value="All">All Regions</option>
+                {regions.map(r => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+              </select>
+            </div>
+            
+            {/* Province Filter */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Province</label>
+              <select 
+                className="block w-36 pl-3 pr-10 py-2 text-base border-slate-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm border"
+                value={selectedProvince}
+                onChange={(e) => setSelectedProvince(e.target.value)}
+              >
+                <option value="All">All Provinces</option>
+                {filteredProvinces.map(p => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+            </div>
+
             {data && (
               <StationSelector 
-                stations={data.metadata.stations} 
+                stations={filteredStations} 
+                stationNames={data.metadata.stationNames}
                 selectedStation={selectedStation} 
                 onSelect={setSelectedStation} 
               />

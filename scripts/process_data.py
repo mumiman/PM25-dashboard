@@ -149,26 +149,87 @@ def process_data():
             meta_clean = meta_raw.iloc[header_row_idx+1:].copy()
             
             # Now we look for columns "รหัสสถานี" and "ชื่อสถานี"
-            if "รหัสสถานี" in meta_clean.columns and "ชื่อสถานี" in meta_clean.columns:
-               for _, row in meta_clean.iterrows():
-                   code = str(row["รหัสสถานี"]).strip()
-                   name = str(row["ชื่อสถานี"]).strip()
-                   if code and code.lower() != 'nan':
-                       station_names[code] = name
-            else:
-                print("Could not find expected columns in metadata sheet.")
-        else:
-             print("Could not find 'รหัสสถานี' header in metadata sheet.")
+            # Based on inspection, column 3 (index 3) is address which contains province.
+            # "รหัสสถานี" is Col 2, "ชื่อสถานี" is Col 3 (Address in our manual inspection showed Col 3 as address but labeled as Name? Wait.)
+            # Let's re-verify column mapping from inspection:
+            # Row 2 (Header): NaN, ลำดับ, รหัสสถานี, ชื่อสถานี, รายละเอียดจุดติดตั้งสถานี
+            # Col Indices:    0,    1,      2,          3,          4
+            # Row 4 (Data):   NaN,  1,      02T,        แขวง...กทม., มหาวิทยาลัย...
+            
+            # So "ชื่อสถานี" (Col 3) seems to clearly contain the Address including Province (e.g. "จ.นนทบุรี"). 
+            # Wait, the header says "ชื่อสถานี" (Station Name) but content is address. 
+            # And Col 4 "รายละเอียดจุดติดตั้งสถานี" (Installation Details) contains what serves as a better "Display Name" (e.g. "University...").
+            
+            # Update: 
+            # - stationNames should probably come from Col 4 (Installation Details) if available, or Col 3 if not. 
+            # - province comes from Col 3 (Address).
+            
+            # Let's extract both.
+            station_provinces = {}
+            
+            # Columns in meta_clean are labeled by valid header row values.
+            # We labeled them via: meta_raw.iloc[header_row_idx]
+            # So we access by name "รหัสสถานี", "ชื่อสถานี", "รายละเอียดจุดติดตั้งสถานี"
+            
+            has_details = "รายละเอียดจุดติดตั้งสถานี" in meta_clean.columns
+            
+            for _, row in meta_clean.iterrows():
+                code = str(row["รหัสสถานี"]).strip()
+                if not code or code.lower() == 'nan': continue
+                
+                address = str(row["ชื่อสถานี"]).strip()
+                detail_name = str(row["รายละเอียดจุดติดตั้งสถานี"]).strip() if has_details else ""
+                
+                # Determine Display Name
+                # Use detail_name if valid, else address
+                display_name = detail_name if detail_name and detail_name.lower() != 'nan' else address
+                station_names[code] = display_name
+                
+                # Extract Province
+                province = "Unknown"
+                if "กทม" in address or "กรุงเทพ" in address:
+                    province = "Bangkok"
+                elif "จ." in address:
+                    # Split by "จ." and take the immediate next part, stripping whitespace
+                    try:
+                        parts = address.split("จ.")
+                        if len(parts) > 1:
+                            # The province is usually the start of the next part
+                            # e.g. "จ.นนทบุรี" -> ["...", "นนทบุรี"]
+                            # Clean up potential trailing text? Usually it ends there.
+                            province = parts[1].strip().split(" ")[0] # Take first word after จ.
+                    except:
+                        pass
+                
+                station_provinces[code] = province
 
     except Exception as e:
         print(f"Warning: Could not extract station metadata: {e}")
+
+    # Sort metadata lists
+    
+    # IMPORT REGION MAPPING
+    # Since it's a sibling script, we can import it.
+    try:
+        from region_mapping import get_region
+    except ImportError:
+        import sys
+        sys.path.append(os.path.dirname(__file__))
+        from region_mapping import get_region
+
+    station_regions = {}
+    for station, province in station_provinces.items():
+        station_regions[station] = get_region(province)
+
 
     output_data = {
         "metadata": {
             "minDate": min_date,
             "maxDate": max_date,
             "stations": sorted([str(s) for s in stations]), # Ensure strings
-            "stationNames": station_names
+            "stationNames": station_names,
+            "stationProvinces": station_provinces,
+            "stationRegions": station_regions
         },
         "data": {}
     }
