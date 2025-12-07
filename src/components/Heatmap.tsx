@@ -18,12 +18,11 @@ function cn(...inputs: any[]) {
 
 // Color scale function
 const getColor = (value: number) => {
-  if (value < 12) return 'bg-emerald-100 text-emerald-900'; // Good
-  if (value < 35.4) return 'bg-yellow-100 text-yellow-900'; // Moderate
-  if (value < 55.4) return 'bg-orange-100 text-orange-900'; // Unhealthy for sensitive
-  if (value < 150.4) return 'bg-red-200 text-red-900'; // Unhealthy
-  if (value < 250.4) return 'bg-purple-200 text-purple-900'; // Very Unhealthy
-  return 'bg-rose-900 text-rose-100'; // Hazardous
+  if (value <= 15) return 'bg-blue-100 text-blue-900'; // Very Good (0-15) - Using Blue for 'Excellent' distinct from Good
+  if (value <= 25) return 'bg-emerald-100 text-emerald-900'; // Good (15.1-25)
+  if (value <= 37.5) return 'bg-yellow-100 text-yellow-900'; // Moderate (25.1-37.5)
+  if (value <= 75) return 'bg-orange-100 text-orange-900'; // Unhealthy for sensitive (37.6-75)
+  return 'bg-red-200 text-red-900'; // Unhealthy (>75)
 };
 
 export function Heatmap({ data, title = "Seasonality Heatmap" }: HeatmapProps) {
@@ -84,10 +83,10 @@ export function Heatmap({ data, title = "Seasonality Heatmap" }: HeatmapProps) {
                   <div 
                     key={key}
                     className={cn(
-                      "h-8 rounded flex items-center justify-center text-[10px] font-medium transition-colors",
+                      "h-8 rounded flex items-center justify-center text-[10px] font-medium transition-colors cursor-help",
                       avg !== null ? getColor(avg) : "bg-slate-50"
                     )}
-                    title={avg ? `${months[monthIdx]} ${year}: ${avg.toFixed(1)}` : 'No Data'}
+                    title={avg ? `${months[monthIdx]} ${year}: ${avg.toFixed(1)} µg/m³` : 'No Data'}
                   >
                     {avg ? avg.toFixed(0) : '-'}
                   </div>
@@ -98,12 +97,33 @@ export function Heatmap({ data, title = "Seasonality Heatmap" }: HeatmapProps) {
         </div>
       </div>
           
-      {/* Legend */}
-      <div className="mt-6 flex flex-wrap gap-4 items-center justify-center text-xs text-slate-600">
-        <div className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-emerald-100 border border-emerald-200"></span> Good (&lt;12)</div>
-        <div className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-yellow-100 border border-yellow-200"></span> Moderate (12-35)</div>
-        <div className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-orange-100 border border-orange-200"></span> High (35-55)</div>
-        <div className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-200 border border-red-300"></span> Unhealthy (&gt;55)</div>
+      {/* Legend with Thai Labels */}
+      <div className="mt-6 flex flex-wrap gap-2 items-start justify-center text-xs text-slate-600">
+        <div className="flex flex-col items-center gap-1 w-24 text-center">
+            <span className="w-full h-3 rounded bg-blue-100 border border-blue-200"></span> 
+            <span className="font-semibold text-blue-800">ดีมาก</span>
+            <span className="text-[10px] text-slate-400">0-15</span>
+        </div>
+        <div className="flex flex-col items-center gap-1 w-24 text-center">
+            <span className="w-full h-3 rounded bg-emerald-100 border border-emerald-200"></span> 
+            <span className="font-semibold text-emerald-800">ดี</span>
+            <span className="text-[10px] text-slate-400">15.1-25.0</span>
+        </div>
+        <div className="flex flex-col items-center gap-1 w-24 text-center">
+            <span className="w-full h-3 rounded bg-yellow-100 border border-yellow-200"></span> 
+            <span className="font-semibold text-yellow-800">ปานกลาง</span>
+            <span className="text-[10px] text-slate-400">25.1-37.5</span>
+        </div>
+        <div className="flex flex-col items-center gap-1 w-28 text-center">
+            <span className="w-full h-3 rounded bg-orange-100 border border-orange-200"></span> 
+            <span className="font-semibold text-orange-800 leading-tight">เริ่มมีผลกระทบ<br/>ต่อสุขภาพ</span>
+            <span className="text-[10px] text-slate-400">37.6-75.0</span>
+        </div>
+        <div className="flex flex-col items-center gap-1 w-24 text-center">
+            <span className="w-full h-3 rounded bg-red-200 border border-red-300"></span> 
+            <span className="font-semibold text-red-900 leading-tight">มีผลกระทบ<br/>ต่อสุขภาพ</span>
+            <span className="text-[10px] text-slate-400">&gt; 75.1</span>
+        </div>
       </div>
     </div>
   );
