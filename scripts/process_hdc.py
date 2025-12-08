@@ -21,10 +21,12 @@ DISEASE_GROUPS = {
         "Other acute ischemic heart diseases (I24)",
         "Subsequent ST elevation (STEMI) and non-ST elevation (NSTEMI) myocardial infarction (I22)"
     ],
-    "Skin/Eye": [
-        "Conjunctivitis (H10)",
+    "Skin": [
         "Eczema (L30.9)",
         "Urticaria (L50)"
+    ],
+    "Eye": [
+        "Conjunctivitis (H10)"
     ]
 }
 
@@ -79,7 +81,8 @@ def process_hdc_data():
                 "diseases": {
                     "Respiratory": [0] * 53,
                     "Cardiovascular": [0] * 53,
-                    "Skin/Eye": [0] * 53,
+                    "Skin": [0] * 53,
+                    "Eye": [0] * 53,
                     "Total": [0] * 53
                 }
             }

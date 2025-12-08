@@ -87,6 +87,8 @@ export function HealthChart({ pm25Data, province, hdcData }: HealthChartProps) {
         });
 
         const data = [];
+        const groups = hdcData.metadata.groups;
+
         for (let i = 0; i < 53; i++) { // Weeks 1-53
              const weekNum = i + 1;
              const pm25Vals = weeklyPM25[weekNum];
@@ -94,14 +96,26 @@ export function HealthChart({ pm25Data, province, hdcData }: HealthChartProps) {
                 ? pm25Vals.reduce((a, b) => a + b, 0) / pm25Vals.length 
                 : null;
              
-             const diseaseCounts = yearHDC.diseases[selectedDisease];
-             const caseCount = diseaseCounts ? diseaseCounts[i] : null;
+             // Get counts for all groups
+             const groupCounts: Record<string, number> = {};
+             let totalCases = 0;
+             let hasHealthData = false;
 
-             if (avgPM25 !== null || caseCount !== null) {
+             groups.forEach(g => {
+                 const counts = yearHDC.diseases[g];
+                 if (counts && counts[i] !== undefined) {
+                     groupCounts[g] = counts[i];
+                     totalCases += counts[i];
+                     hasHealthData = true;
+                 }
+             });
+
+             if (avgPM25 !== null || hasHealthData) {
                  data.push({
                      week: weekNum,
                      pm25: avgPM25,
-                     cases: caseCount
+                     cases: selectedDisease === 'Total' ? totalCases : groupCounts[selectedDisease], // Keep 'cases' for tooltip sum or single bar
+                     ...groupCounts // Spread individual counts: { Respiratory: 10, Skin: 5 ... }
                  });
              }
         }
@@ -119,12 +133,21 @@ export function HealthChart({ pm25Data, province, hdcData }: HealthChartProps) {
          );
     }
 
-    // Check if we have data for the *default* year, if not switch? 
-    // Or just let user switch. But better to indicate available years.
-    const availableYears = Object.keys(hdcData.data[province]).map(Number).sort((a,b) => b-a); // Descending
+    const availableYears = Object.keys(hdcData.data[province]).map(Number).sort((a,b) => b-a);
+    
+    const COLORS: Record<string, string> = {
+        'Respiratory': '#3b82f6', // Blue
+        'Cardiovascular': '#a855f7', // Purple
+        'Skin': '#f97316', // Orange
+        'Eye': '#06b6d4', // Cyan
+        'Total': '#64748b' // Slate (unused in stack, but fallback)
+    };
+
+    // ... (rest of code)
 
     return (
         <div className="w-full h-[400px] bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+             {/* Header Section same as before */}
              <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h3 className="text-lg font-semibold text-slate-800">Health Impact Correlation</h3>
@@ -147,7 +170,7 @@ export function HealthChart({ pm25Data, province, hdcData }: HealthChartProps) {
                         value={selectedDisease}
                         onChange={(e) => setSelectedDisease(e.target.value)}
                     >
-                        <option value="Total">Total Cases</option>
+                        <option value="Total">Total Cases (Stacked)</option>
                         {hdcData.metadata.groups.map(g => (
                             <option key={g} value={g}>{g}</option>
                         ))}
@@ -196,16 +219,30 @@ export function HealthChart({ pm25Data, province, hdcData }: HealthChartProps) {
                         dot={false}
                     />
 
-                    {/* Patient Cases Bar (Blue) */}
-                    <Bar 
-                        yAxisId="right"
-                        dataKey="cases" 
-                        name={`${selectedDisease} Patients`} 
-                        fill="#3b82f6" 
-                        opacity={0.6}
-                        barSize={12}
-                        radius={[2, 2, 0, 0]}
-                    />
+                    {/* Stacked Bars or Single Bar */}
+                    {selectedDisease === 'Total' ? (
+                       hdcData.metadata.groups.map(g => (
+                           <Bar
+                               key={g}
+                               yAxisId="right"
+                               dataKey={g}
+                               name={g}
+                               stackId="a"
+                               fill={COLORS[g] || '#cbd5e1'}
+                               opacity={0.8}
+                               barSize={12}
+                           />
+                       ))
+                    ) : (
+                        <Bar 
+                            yAxisId="right"
+                            dataKey="cases" 
+                            name={`${selectedDisease} Patients`} 
+                            fill={COLORS[selectedDisease] || '#3b82f6'}
+                            opacity={0.8}
+                            barSize={12}
+                        />
+                    )}
                 </ComposedChart>
             </ResponsiveContainer>
         </div>
