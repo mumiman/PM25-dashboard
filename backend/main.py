@@ -1,14 +1,16 @@
 """
 PM2.5 Dashboard - Analysis Backend (FastAPI)
 Provides statistical analysis endpoints for correlation, forecasting, and lag analysis.
+Includes JSON caching to avoid recomputation.
 """
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List, Dict, Any
 import json
 import os
+from datetime import datetime
 
 # Import analysis modules
 from analysis.correlation import compute_correlation
@@ -34,9 +36,11 @@ app.add_middleware(
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "public", "data")
 PM25_PATH = os.path.join(DATA_DIR, "pm25_consolidated.json")
 HDC_PATH = os.path.join(DATA_DIR, "hdc_consolidated.json")
+CACHE_PATH = os.path.join(DATA_DIR, "analysis_cache.json")
 
 class ComputeRequest(BaseModel):
-    year: int = 2025
+    year: int = 2026
+    force_recompute: bool = False
 
 class CorrelationResult(BaseModel):
     disease: str
@@ -47,22 +51,47 @@ class CorrelationResult(BaseModel):
     r_squared: float
     n: int
 
+class ForecastPoint(BaseModel):
+    week: int
+    year: int
+    value: float
+    ci_lower: float
+    ci_upper: float
+
+class ModelInfo(BaseModel):
+    name: str
+    order: Optional[str] = None
+    seasonal_order: Optional[str] = None
+    trend: Optional[str] = None
+    seasonal: Optional[str] = None
+    seasonal_periods: Optional[int] = None
+    description: str
+    aic: Optional[float] = None
+    bic: Optional[float] = None
+    smoothing_level: Optional[float] = None
+    smoothing_trend: Optional[float] = None
+    smoothing_seasonal: Optional[float] = None
+
 class ForecastResult(BaseModel):
-    target: str  # "pm25" or disease name
-    forecast: list  # [{"week": 1, "value": 30.5, "ci_lower": 25, "ci_upper": 36}, ...]
+    target: str
+    forecast: List[ForecastPoint]
+    model: ModelInfo
+    current_week: int
+    current_year: int
     
 class LagResult(BaseModel):
     disease: str
-    correlations: list  # [{"lag": 0, "r": 0.65}, {"lag": 1, "r": 0.72}, ...]
+    correlations: list
     optimal_lag: int
     optimal_r: float
 
 class AnalysisResponse(BaseModel):
-    correlations: list[CorrelationResult]
-    forecasts: list[ForecastResult]
-    lag_analysis: list[LagResult]
+    correlations: List[CorrelationResult]
+    forecasts: List[ForecastResult]
+    lag_analysis: List[LagResult]
     threshold_analysis: dict
     computed_at: str
+    cached: bool = False
 
 def load_data():
     """Load PM2.5 and HDC data from JSON files."""
@@ -75,6 +104,32 @@ def load_data():
     except FileNotFoundError as e:
         raise HTTPException(status_code=500, detail=f"Data file not found: {e}")
 
+def load_cache(year: int) -> Optional[Dict]:
+    """Load cached analysis results if they exist."""
+    try:
+        if os.path.exists(CACHE_PATH):
+            with open(CACHE_PATH, 'r', encoding='utf-8') as f:
+                cache = json.load(f)
+            # Check if cache is for the same year and not too old (within 24 hours)
+            if cache.get('year') == year:
+                # Cache is valid
+                return cache
+    except (json.JSONDecodeError, FileNotFoundError):
+        pass
+    return None
+
+def save_cache(year: int, data: Dict):
+    """Save analysis results to cache file."""
+    try:
+        cache_data = {
+            'year': year,
+            **data
+        }
+        with open(CACHE_PATH, 'w', encoding='utf-8') as f:
+            json.dump(cache_data, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"Failed to save cache: {e}")
+
 @app.get("/")
 def root():
     return {"message": "PM2.5 Analysis API", "status": "running"}
@@ -83,13 +138,31 @@ def root():
 def health_check():
     return {"status": "healthy"}
 
-@app.post("/api/compute", response_model=AnalysisResponse)
+@app.get("/api/analysis")
+def get_cached_analysis(year: int = 2026):
+    """Get cached analysis results if available."""
+    cache = load_cache(year)
+    if cache:
+        return {**cache, "cached": True}
+    return {"error": "No cached results available", "cached": False}
+
+@app.post("/api/compute")
 def compute_analysis(request: ComputeRequest):
     """
     Compute all statistical analyses for the given year.
     Returns correlation, forecast, lag analysis, and threshold analysis.
+    
+    - If force_recompute is False and cache exists, return cached results
+    - Otherwise, compute fresh results and save to cache
     """
-    from datetime import datetime
+    # Check cache first (unless force_recompute)
+    if not request.force_recompute:
+        cache = load_cache(request.year)
+        if cache:
+            # Remove year key before returning
+            cache.pop('year', None)
+            cache['cached'] = True
+            return cache
     
     pm25_data, hdc_data = load_data()
     
@@ -107,13 +180,19 @@ def compute_analysis(request: ComputeRequest):
     # Threshold analysis
     threshold_analysis = compute_threshold_analysis(pm25_data, hdc_data, region6_provinces, request.year)
     
-    return AnalysisResponse(
-        correlations=correlations,
-        forecasts=forecasts,
-        lag_analysis=lag_analysis,
-        threshold_analysis=threshold_analysis,
-        computed_at=datetime.now().isoformat()
-    )
+    result = {
+        "correlations": correlations,
+        "forecasts": forecasts,
+        "lag_analysis": lag_analysis,
+        "threshold_analysis": threshold_analysis,
+        "computed_at": datetime.now().isoformat(),
+        "cached": False
+    }
+    
+    # Save to cache
+    save_cache(request.year, result)
+    
+    return result
 
 def compute_threshold_analysis(pm25_data, hdc_data, provinces, year):
     """Compute average cases by PM2.5 threshold levels."""

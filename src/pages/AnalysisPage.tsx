@@ -28,14 +28,33 @@ interface CorrelationResult {
 
 interface ForecastPoint {
   week: number;
+  year: number;
   value: number;
   ci_lower: number;
   ci_upper: number;
 }
 
+interface ModelInfo {
+  name: string;
+  order?: string;
+  seasonal_order?: string;
+  trend?: string;
+  seasonal?: string;
+  seasonal_periods?: number;
+  description: string;
+  aic?: number;
+  bic?: number;
+  smoothing_level?: number;
+  smoothing_trend?: number;
+  smoothing_seasonal?: number;
+}
+
 interface ForecastResult {
   target: string;
   forecast: ForecastPoint[];
+  model: ModelInfo;
+  current_week: number;
+  current_year: number;
 }
 
 interface LagCorrelation {
@@ -60,16 +79,17 @@ interface AnalysisData {
     avg_cases: Record<string, number[]>;
   };
   computed_at: string;
+  cached: boolean;
 }
 
 export function AnalysisPage() {
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedYear, setSelectedYear] = useState(2025);
+  const [selectedYear, setSelectedYear] = useState(2026);
   const [selectedTab, setSelectedTab] = useState<'correlation' | 'forecast' | 'lag' | 'threshold'>('correlation');
 
-  const handleCompute = async () => {
+  const handleCompute = async (force: boolean = false) => {
     setLoading(true);
     setError(null);
     
@@ -77,7 +97,7 @@ export function AnalysisPage() {
       const response = await fetch('/api/compute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ year: selectedYear })
+        body: JSON.stringify({ year: selectedYear, force_recompute: force })
       });
       
       if (!response.ok) {
@@ -125,19 +145,27 @@ export function AnalysisPage() {
               value={selectedYear}
               onChange={(e) => setSelectedYear(Number(e.target.value))}
             >
-              {[2025, 2024, 2023, 2022, 2021].map(y => (
+              {[2026, 2025, 2024, 2023, 2022].map(y => (
                 <option key={y} value={y}>{y}</option>
               ))}
             </select>
           </div>
           
           <button
-            onClick={handleCompute}
+            onClick={() => handleCompute(false)}
             disabled={loading}
             className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-            {loading ? 'กำลังคำนวณ...' : 'คำนวณใหม่'}
+            {loading ? 'กำลังคำนวณ...' : 'โหลดข้อมูล'}
+          </button>
+          
+          <button
+            onClick={() => handleCompute(true)}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+          >
+            คำนวณใหม่
           </button>
         </div>
       </div>
@@ -173,9 +201,9 @@ export function AnalysisPage() {
         <div className="bg-white p-12 rounded-xl shadow-sm border border-slate-100 text-center">
           <BarChart3 size={48} className="mx-auto text-slate-300 mb-4" />
           <h3 className="text-lg font-medium text-slate-700 mb-2">ยังไม่มีข้อมูลการวิเคราะห์</h3>
-          <p className="text-slate-500 mb-4">กดปุ่ม "คำนวณใหม่" เพื่อเริ่มการวิเคราะห์ทางสถิติ</p>
+          <p className="text-slate-500 mb-4">กดปุ่ม "โหลดข้อมูล" เพื่อเริ่มการวิเคราะห์ทางสถิติ</p>
           <button
-            onClick={handleCompute}
+            onClick={() => handleCompute(false)}
             disabled={loading}
             className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
           >
@@ -184,9 +212,14 @@ export function AnalysisPage() {
         </div>
       ) : (
         <div className="space-y-6">
-          {/* Last computed time */}
-          <div className="text-sm text-slate-500 text-right">
-            คำนวณล่าสุด: {new Date(analysisData.computed_at).toLocaleString('th-TH')}
+          {/* Last computed time and cache status */}
+          <div className="flex justify-between items-center text-sm">
+            <span className={analysisData.cached ? 'text-amber-600' : 'text-green-600'}>
+              {analysisData.cached ? '📁 ใช้ข้อมูลจาก Cache' : '✓ คำนวณใหม่'}
+            </span>
+            <span className="text-slate-500">
+              คำนวณล่าสุด: {new Date(analysisData.computed_at).toLocaleString('th-TH')}
+            </span>
           </div>
 
           {/* Correlation Tab */}
@@ -285,11 +318,29 @@ function ForecastSection({ data }: { data: ForecastResult[] }) {
   
   const currentForecast = data.find(f => f.target === selectedTarget);
   
+  // Format model parameters for display
+  const formatModelParams = (model: ModelInfo) => {
+    if (model.name === 'SARIMA' && model.order && model.seasonal_order) {
+      return `${model.name} ${model.order}${model.seasonal_order}`;
+    } else if (model.name === 'Holt-Winters') {
+      return `${model.name} (trend=${model.trend}, seasonal=${model.seasonal}, period=${model.seasonal_periods})`;
+    }
+    return model.name;
+  };
+  
   return (
     <div className="space-y-6">
       <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-slate-800">Forecast</h3>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+          <div>
+            <h3 className="text-lg font-bold text-slate-800">Forecast (12 สัปดาห์)</h3>
+            {currentForecast && (
+              <p className="text-sm text-slate-500">
+                ข้อมูลปัจจุบัน: Week {currentForecast.current_week}, {currentForecast.current_year}
+                {currentForecast.target !== 'PM2.5' && ' (lag -1 สัปดาห์)'}
+              </p>
+            )}
+          </div>
           <select
             value={selectedTarget}
             onChange={(e) => setSelectedTarget(e.target.value)}
@@ -301,13 +352,76 @@ function ForecastSection({ data }: { data: ForecastResult[] }) {
           </select>
         </div>
         
+        {/* Model Info Box */}
+        {currentForecast && (
+          <div className="mb-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
+            <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+              <div>
+                <span className="text-slate-500">Model:</span>{' '}
+                <span className="font-mono font-medium text-indigo-700">
+                  {formatModelParams(currentForecast.model)}
+                </span>
+              </div>
+              {currentForecast.model.aic && (
+                <div>
+                  <span className="text-slate-500">AIC:</span>{' '}
+                  <span className="font-mono">{currentForecast.model.aic}</span>
+                </div>
+              )}
+              {currentForecast.model.bic && (
+                <div>
+                  <span className="text-slate-500">BIC:</span>{' '}
+                  <span className="font-mono">{currentForecast.model.bic}</span>
+                </div>
+              )}
+              {currentForecast.model.smoothing_level !== undefined && (
+                <div>
+                  <span className="text-slate-500">α:</span>{' '}
+                  <span className="font-mono">{currentForecast.model.smoothing_level}</span>
+                </div>
+              )}
+              {currentForecast.model.smoothing_trend !== undefined && (
+                <div>
+                  <span className="text-slate-500">β:</span>{' '}
+                  <span className="font-mono">{currentForecast.model.smoothing_trend}</span>
+                </div>
+              )}
+              {currentForecast.model.smoothing_seasonal !== undefined && (
+                <div>
+                  <span className="text-slate-500">γ:</span>{' '}
+                  <span className="font-mono">{currentForecast.model.smoothing_seasonal}</span>
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-slate-400 mt-1">{currentForecast.model.description}</p>
+          </div>
+        )}
+        
         {currentForecast && (
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={currentForecast.forecast}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="week" label={{ value: 'Week', position: 'bottom' }} />
+              <XAxis 
+                dataKey="week" 
+                tickFormatter={(week, index) => {
+                  const point = currentForecast.forecast[index];
+                  return point ? `W${week}/${point.year}` : `W${week}`;
+                }}
+              />
               <YAxis />
-              <Tooltip />
+              <Tooltip 
+                formatter={(value: number, name: string) => [
+                  currentForecast.target === 'PM2.5' ? `${value} µg/m³` : `${value} cases`,
+                  name
+                ]}
+                labelFormatter={(week, payload) => {
+                  if (payload && payload[0]) {
+                    const point = payload[0].payload;
+                    return `Week ${point.week}, ${point.year}`;
+                  }
+                  return `Week ${week}`;
+                }}
+              />
               <Legend />
               <Area
                 type="monotone"
@@ -315,7 +429,7 @@ function ForecastSection({ data }: { data: ForecastResult[] }) {
                 stackId="1"
                 stroke="none"
                 fill="#c7d2fe"
-                name="Upper CI"
+                name="Upper CI (95%)"
               />
               <Area
                 type="monotone"
@@ -323,7 +437,7 @@ function ForecastSection({ data }: { data: ForecastResult[] }) {
                 stackId="2"
                 stroke="none"
                 fill="#ffffff"
-                name="Lower CI"
+                name="Lower CI (95%)"
               />
               <Line
                 type="monotone"
