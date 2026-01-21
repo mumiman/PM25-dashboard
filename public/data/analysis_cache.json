@@ -1,0 +1,659 @@
+{
+  "year": 2026,
+  "correlations": [],
+  "forecasts": [
+    {
+      "target": "PM2.5",
+      "forecast": [
+        {
+          "week": 5,
+          "year": 2026,
+          "value": 35.52,
+          "ci_lower": 21.89,
+          "ci_upper": 49.15
+        },
+        {
+          "week": 6,
+          "year": 2026,
+          "value": 27.95,
+          "ci_lower": 13.02,
+          "ci_upper": 42.88
+        },
+        {
+          "week": 7,
+          "year": 2026,
+          "value": 29.78,
+          "ci_lower": 14.57,
+          "ci_upper": 44.99
+        },
+        {
+          "week": 8,
+          "year": 2026,
+          "value": 28.33,
+          "ci_lower": 13.04,
+          "ci_upper": 43.63
+        },
+        {
+          "week": 9,
+          "year": 2026,
+          "value": 22.94,
+          "ci_lower": 7.61,
+          "ci_upper": 38.27
+        },
+        {
+          "week": 10,
+          "year": 2026,
+          "value": 24.64,
+          "ci_lower": 9.29,
+          "ci_upper": 39.98
+        },
+        {
+          "week": 11,
+          "year": 2026,
+          "value": 23.15,
+          "ci_lower": 7.79,
+          "ci_upper": 38.52
+        },
+        {
+          "week": 12,
+          "year": 2026,
+          "value": 21.02,
+          "ci_lower": 5.65,
+          "ci_upper": 36.4
+        },
+        {
+          "week": 13,
+          "year": 2026,
+          "value": 18.45,
+          "ci_lower": 3.06,
+          "ci_upper": 33.84
+        },
+        {
+          "week": 14,
+          "year": 2026,
+          "value": 20.38,
+          "ci_lower": 4.98,
+          "ci_upper": 35.79
+        },
+        {
+          "week": 15,
+          "year": 2026,
+          "value": 21.02,
+          "ci_lower": 5.61,
+          "ci_upper": 36.44
+        },
+        {
+          "week": 16,
+          "year": 2026,
+          "value": 19.75,
+          "ci_lower": 4.33,
+          "ci_upper": 35.18
+        }
+      ],
+      "model": {
+        "name": "SARIMA",
+        "order": "(1,1,1)",
+        "seasonal_order": "(1,1,1,52)",
+        "description": "Seasonal ARIMA with 52-week seasonality",
+        "aic": 4475.67,
+        "bic": 4498.12
+      },
+      "current_week": 4,
+      "current_year": 2026
+    },
+    {
+      "target": "Total",
+      "forecast": [
+        {
+          "week": 4,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 1197.0
+        },
+        {
+          "week": 5,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 1693.0
+        },
+        {
+          "week": 6,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 2073.0
+        },
+        {
+          "week": 7,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 2394.0
+        },
+        {
+          "week": 8,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 2677.0
+        },
+        {
+          "week": 9,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 2932.0
+        },
+        {
+          "week": 10,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 3167.0
+        },
+        {
+          "week": 11,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 3386.0
+        },
+        {
+          "week": 12,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 3591.0
+        },
+        {
+          "week": 13,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 3785.0
+        },
+        {
+          "week": 14,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 3970.0
+        },
+        {
+          "week": 15,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 4147.0
+        }
+      ],
+      "model": {
+        "name": "Holt-Winters",
+        "trend": "additive",
+        "seasonal": "additive",
+        "seasonal_periods": 52,
+        "description": "Exponential Smoothing with additive trend and seasonality",
+        "smoothing_level": 1.0,
+        "smoothing_trend": 0.2325,
+        "smoothing_seasonal": 0.0
+      },
+      "current_week": 3,
+      "current_year": 2026
+    },
+    {
+      "target": "Respiratory",
+      "forecast": [
+        {
+          "week": 4,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 460.0
+        },
+        {
+          "week": 5,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 650.0
+        },
+        {
+          "week": 6,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 796.0
+        },
+        {
+          "week": 7,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 919.0
+        },
+        {
+          "week": 8,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 1028.0
+        },
+        {
+          "week": 9,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 1126.0
+        },
+        {
+          "week": 10,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 1216.0
+        },
+        {
+          "week": 11,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 1300.0
+        },
+        {
+          "week": 12,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 1379.0
+        },
+        {
+          "week": 13,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 1454.0
+        },
+        {
+          "week": 14,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 1525.0
+        },
+        {
+          "week": 15,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 1592.0
+        }
+      ],
+      "model": {
+        "name": "Holt-Winters",
+        "trend": "additive",
+        "seasonal": "additive",
+        "seasonal_periods": 52,
+        "description": "Exponential Smoothing with additive trend and seasonality",
+        "smoothing_level": 1.0,
+        "smoothing_trend": 0.2527,
+        "smoothing_seasonal": 0.0
+      },
+      "current_week": 3,
+      "current_year": 2026
+    },
+    {
+      "target": "Cardiovascular",
+      "forecast": [
+        {
+          "week": 4,
+          "year": 2026,
+          "value": 7.0,
+          "ci_lower": 0,
+          "ci_upper": 78.0
+        },
+        {
+          "week": 5,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 100.0
+        },
+        {
+          "week": 6,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 122.0
+        },
+        {
+          "week": 7,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 141.0
+        },
+        {
+          "week": 8,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 158.0
+        },
+        {
+          "week": 9,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 173.0
+        },
+        {
+          "week": 10,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 187.0
+        },
+        {
+          "week": 11,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 199.0
+        },
+        {
+          "week": 12,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 212.0
+        },
+        {
+          "week": 13,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 223.0
+        },
+        {
+          "week": 14,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 234.0
+        },
+        {
+          "week": 15,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 244.0
+        }
+      ],
+      "model": {
+        "name": "Holt-Winters",
+        "trend": "additive",
+        "seasonal": "additive",
+        "seasonal_periods": 52,
+        "description": "Exponential Smoothing with additive trend and seasonality",
+        "smoothing_level": 0.9979,
+        "smoothing_trend": 0.2035,
+        "smoothing_seasonal": 0.0
+      },
+      "current_week": 3,
+      "current_year": 2026
+    },
+    {
+      "target": "Skin",
+      "forecast": [
+        {
+          "week": 4,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 360.0
+        },
+        {
+          "week": 5,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 509.0
+        },
+        {
+          "week": 6,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 623.0
+        },
+        {
+          "week": 7,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 720.0
+        },
+        {
+          "week": 8,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 804.0
+        },
+        {
+          "week": 9,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 881.0
+        },
+        {
+          "week": 10,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 952.0
+        },
+        {
+          "week": 11,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 1018.0
+        },
+        {
+          "week": 12,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 1079.0
+        },
+        {
+          "week": 13,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 1138.0
+        },
+        {
+          "week": 14,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 1193.0
+        },
+        {
+          "week": 15,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 1246.0
+        }
+      ],
+      "model": {
+        "name": "Holt-Winters",
+        "trend": "additive",
+        "seasonal": "additive",
+        "seasonal_periods": 52,
+        "description": "Exponential Smoothing with additive trend and seasonality",
+        "smoothing_level": 1.0,
+        "smoothing_trend": 0.2029,
+        "smoothing_seasonal": 0.0
+      },
+      "current_week": 3,
+      "current_year": 2026
+    },
+    {
+      "target": "Eye",
+      "forecast": [
+        {
+          "week": 4,
+          "year": 2026,
+          "value": 14.0,
+          "ci_lower": 0,
+          "ci_upper": 364.0
+        },
+        {
+          "week": 5,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 495.0
+        },
+        {
+          "week": 6,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 606.0
+        },
+        {
+          "week": 7,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 700.0
+        },
+        {
+          "week": 8,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 783.0
+        },
+        {
+          "week": 9,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 858.0
+        },
+        {
+          "week": 10,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 926.0
+        },
+        {
+          "week": 11,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 990.0
+        },
+        {
+          "week": 12,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 1050.0
+        },
+        {
+          "week": 13,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 1107.0
+        },
+        {
+          "week": 14,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 1161.0
+        },
+        {
+          "week": 15,
+          "year": 2026,
+          "value": 0,
+          "ci_lower": 0,
+          "ci_upper": 1213.0
+        }
+      ],
+      "model": {
+        "name": "Holt-Winters",
+        "trend": "additive",
+        "seasonal": "additive",
+        "seasonal_periods": 52,
+        "description": "Exponential Smoothing with additive trend and seasonality",
+        "smoothing_level": 1.0,
+        "smoothing_trend": 0.1719,
+        "smoothing_seasonal": 0.0
+      },
+      "current_week": 3,
+      "current_year": 2026
+    }
+  ],
+  "lag_analysis": [],
+  "threshold_analysis": {
+    "thresholds": [
+      "Good (0-25)",
+      "Moderate (26-37)",
+      "Unhealthy Sensitive (38-50)",
+      "Unhealthy (51-90)",
+      "Very Unhealthy (>90)"
+    ],
+    "avg_cases": {
+      "Total": [
+        100,
+        150,
+        200,
+        350,
+        500
+      ],
+      "Respiratory": [
+        40,
+        60,
+        90,
+        150,
+        220
+      ],
+      "Cardiovascular": [
+        25,
+        35,
+        45,
+        80,
+        120
+      ],
+      "Skin": [
+        20,
+        30,
+        40,
+        70,
+        100
+      ],
+      "Eye": [
+        15,
+        25,
+        25,
+        50,
+        60
+      ]
+    }
+  },
+  "computed_at": "2026-01-21T10:55:04.952138",
+  "cached": false
+}
