@@ -65,11 +65,28 @@ export function HealthChart({ pm25Data, province, hdcData }: HealthChartProps) {
     const [selectedDisease, setSelectedDisease] = useState<string>('Total');
     const [selectedYear, setSelectedYear] = useState<number>(2025);
 
+    // Region 6 provinces for aggregation
+    const REGION6_PROVINCES = [
+      'จันทบุรี', 'ฉะเชิงเทรา', 'ชลบุรี', 'ตราด',
+      'ปราจีนบุรี', 'ระยอง', 'สมุทรปราการ', 'สระแก้ว'
+    ];
+    
+    // Determine if we're viewing Region 6 aggregate
+    const isRegion6Aggregate = province === 'เขตสุขภาพที่ 6';
+
+    // Get list of provinces to aggregate
+    const targetProvinces = isRegion6Aggregate ? REGION6_PROVINCES : [province];
+
     const chartData = useMemo(() => {
         // Validate Data Availability
-        if (!hdcData || !hdcData.data[province] || !hdcData.data[province][selectedYear] || !pm25Data || pm25Data.length === 0) return [];
+        if (!hdcData || !pm25Data || pm25Data.length === 0) return [];
         
-        const yearHDC = hdcData.data[province][selectedYear];
+        // Check if any target province has data for selected year
+        const provincesWithData = targetProvinces.filter(
+            p => hdcData.data[p] && hdcData.data[p][selectedYear]
+        );
+        
+        if (provincesWithData.length === 0) return [];
         
         // Calculate Weekly PM2.5 for Selected Year
         const weeklyPM25: Record<number, number[]> = {};
@@ -96,17 +113,26 @@ export function HealthChart({ pm25Data, province, hdcData }: HealthChartProps) {
                 ? pm25Vals.reduce((a, b) => a + b, 0) / pm25Vals.length 
                 : null;
              
-             // Get counts for all groups
+             // Aggregate counts from all target provinces
              const groupCounts: Record<string, number> = {};
              let totalCases = 0;
              let hasHealthData = false;
 
              groups.forEach(g => {
-                 const counts = yearHDC.diseases[g];
-                 if (counts && counts[i] !== undefined) {
-                     groupCounts[g] = counts[i];
-                     totalCases += counts[i];
-                     hasHealthData = true;
+                 groupCounts[g] = 0;
+             });
+
+             provincesWithData.forEach(p => {
+                 const yearHDC = hdcData.data[p][selectedYear];
+                 if (yearHDC) {
+                     groups.forEach(g => {
+                         const counts = yearHDC.diseases[g];
+                         if (counts && counts[i] !== undefined) {
+                             groupCounts[g] += counts[i];
+                             totalCases += counts[i];
+                             hasHealthData = true;
+                         }
+                     });
                  }
              });
 
@@ -114,18 +140,19 @@ export function HealthChart({ pm25Data, province, hdcData }: HealthChartProps) {
                  data.push({
                      week: weekNum,
                      pm25: avgPM25,
-                     cases: selectedDisease === 'Total' ? totalCases : groupCounts[selectedDisease], // Keep 'cases' for tooltip sum or single bar
-                     ...groupCounts // Spread individual counts: { Respiratory: 10, Skin: 5 ... }
+                     cases: selectedDisease === 'Total' ? totalCases : groupCounts[selectedDisease],
+                     ...groupCounts
                  });
              }
         }
         return data;
-    }, [pm25Data, province, hdcData, selectedDisease, selectedYear]);
+    }, [pm25Data, province, hdcData, selectedDisease, selectedYear, targetProvinces]);
 
     if (!hdcData) return null; 
     
-    // Check if province data exists
-    if (!hdcData.data[province]) {
+    // Check if any target province has data
+    const hasProvinceData = targetProvinces.some(p => hdcData.data[p]);
+    if (!hasProvinceData) {
          return (
             <div className="w-full h-[400px] bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center justify-center">
                  <p className="text-slate-400">Health comparison data not available for {province}.</p>
@@ -133,7 +160,12 @@ export function HealthChart({ pm25Data, province, hdcData }: HealthChartProps) {
          );
     }
 
-    const availableYears = Object.keys(hdcData.data[province]).map(Number).sort((a,b) => b-a);
+    // Get available years from all target provinces
+    const availableYears = Array.from(new Set(
+        targetProvinces.flatMap(p => 
+            hdcData.data[p] ? Object.keys(hdcData.data[p]).map(Number) : []
+        )
+    )).sort((a,b) => b-a);
     
     const COLORS: Record<string, string> = {
         'Respiratory': '#3b82f6', // Blue

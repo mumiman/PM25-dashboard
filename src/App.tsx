@@ -6,6 +6,9 @@ import { HealthChart, HDCData } from './components/HealthChart'; // Import
 import { Heatmap } from './components/Heatmap';
 import { DailyHeatmap } from './components/DailyHeatmap';
 import { StationSelector } from './components/StationSelector';
+import { BottomNav } from './components/BottomNav';
+import { Region6Page } from './pages/Region6Page';
+import { AnalysisPage } from './pages/AnalysisPage';
 
 // Types matching our JSON structure
 interface PM25Data {
@@ -21,6 +24,7 @@ interface PM25Data {
 }
 
 function App() {
+  const [currentPage, setCurrentPage] = useState<'region6' | 'analysis' | 'all'>('region6');
   const [data, setData] = useState<PM25Data | null>(null);
   const [hdcData, setHdcData] = useState<HDCData | null>(null); // New State
   const [selectedStation, setSelectedStation] = useState<string>('');
@@ -140,20 +144,85 @@ function App() {
      }
   }, [selectedStation, availableYears, heatmapYear]);
 
+  // If Region6 page is selected, render it with HDC data
+  if (currentPage === 'region6') {
+    return (
+      <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-16">
+        {/* Top Header */}
+        <nav className="bg-white border-b border-slate-200 sticky top-0 z-20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between h-16">
+              <div className="flex items-center gap-2">
+                <div className="bg-indigo-600 p-2 rounded-lg text-white">
+                  <Activity size={20} />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold tracking-tight text-slate-900">R6 - PM2.5 Analytics</h1>
+                  <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Office of Disease Prevention and Control Region 6 Chonburi</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </nav>
+        
+        <Region6Page hdcData={hdcData} />
+        
+        <footer className="text-center text-slate-400 text-sm pb-20">
+          &copy; 2025 R6 - PM2.5 Analytics • Made by Suppasit Srisaeng with Google Antigravity
+        </footer>
+        
+        <BottomNav currentPage={currentPage} onPageChange={setCurrentPage} />
+      </div>
+    );
+  }
+
+  // If Analysis page is selected
+  if (currentPage === 'analysis') {
+    return (
+      <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-16">
+        {/* Top Header */}
+        <nav className="bg-white border-b border-slate-200 sticky top-0 z-20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between h-16">
+              <div className="flex items-center gap-2">
+                <div className="bg-purple-600 p-2 rounded-lg text-white">
+                  <LayoutDashboard size={20} />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold tracking-tight text-slate-900">R6 - Statistical Analysis</h1>
+                  <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">PM2.5 & Health Correlation Analysis</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </nav>
+        
+        <AnalysisPage />
+        
+        <footer className="text-center text-slate-400 text-sm pb-20">
+          &copy; 2025 R6 - PM2.5 Analytics • Made by Suppasit Srisaeng with Google Antigravity
+        </footer>
+        
+        <BottomNav currentPage={currentPage} onPageChange={setCurrentPage} />
+      </div>
+    );
+  }
+
+  // Original "All" page content
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50">
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 pb-16">
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
     </div>
   );
 
   if (error) return (
-    <div className="min-h-screen flex items-center justify-center bg-red-50 text-red-600">
+    <div className="min-h-screen flex items-center justify-center bg-red-50 text-red-600 pb-16">
       Error loading data: {error}
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-16">
       {/* Navbar */}
       <nav className="bg-white border-b border-slate-200 sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -326,10 +395,12 @@ function App() {
           </div>
         </div>
         
-        <footer className="mt-12 text-center text-slate-400 text-sm pb-8">
+        <footer className="mt-12 text-center text-slate-400 text-sm pb-20">
           &copy; 2025 R6 - PM2.5 Analytics • Made by Suppasit Srisaeng with Google Antigravity
         </footer>
       </main>
+      
+      <BottomNav currentPage={currentPage} onPageChange={setCurrentPage} />
     </div>
   );
 }
