@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { BarChart3, TrendingUp, AlertTriangle, RefreshCw, Clock } from 'lucide-react';
+import { API_BASE_URL } from '@/lib/config';
 import {
   ComposedChart,
   Line,
@@ -94,7 +95,7 @@ export function AnalysisPage() {
     setError(null);
     
     try {
-      const response = await fetch('/api/compute', {
+      const response = await fetch(`${API_BASE_URL}/compute`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ year: selectedYear, force_recompute: force })
