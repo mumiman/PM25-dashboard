@@ -2,13 +2,15 @@ import { useState, useEffect } from 'react';
 import { LayoutDashboard, Calendar, Activity, Info } from 'lucide-react';
 import { TrendChart } from './components/TrendChart';
 import { SeasonalChart } from './components/SeasonalChart';
-import { HealthChart, HDCData } from './components/HealthChart'; // Import
+import { HealthChart, HDCData } from './components/HealthChart';
 import { Heatmap } from './components/Heatmap';
 import { DailyHeatmap } from './components/DailyHeatmap';
 import { StationSelector } from './components/StationSelector';
 import { BottomNav } from './components/BottomNav';
 import { Region6Page } from './pages/Region6Page';
 import { AnalysisPage } from './pages/AnalysisPage';
+import { UploadPage } from './pages/UploadPage';
+import { AuthProvider } from './contexts/AuthContext';
 
 // Types matching our JSON structure
 interface PM25Data {
@@ -24,9 +26,17 @@ interface PM25Data {
 }
 
 function App() {
-  const [currentPage, setCurrentPage] = useState<'region6' | 'analysis' | 'all'>('region6');
+  return (
+    <AuthProvider>
+      <Dashboard />
+    </AuthProvider>
+  );
+}
+
+function Dashboard() {
+  const [currentPage, setCurrentPage] = useState<'region6' | 'analysis' | 'upload' | 'all'>('region6');
   const [data, setData] = useState<PM25Data | null>(null);
-  const [hdcData, setHdcData] = useState<HDCData | null>(null); // New State
+  const [hdcData, setHdcData] = useState<HDCData | null>(null);
   const [selectedStation, setSelectedStation] = useState<string>('');
   const [selectedProvince, setSelectedProvince] = useState<string>('All');
   const [selectedRegion, setSelectedRegion] = useState<string>('All');
@@ -34,10 +44,14 @@ function App() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Use relative path which is safer for subfolder deployment
+    // "./data/..." will resolve relative to the current page /pm/
+    const dataPath = './data/';
+
     // Fetch PM2.5 Data
-    fetch('/data/pm25_consolidated.json')
+    fetch(`${dataPath}pm25_consolidated.json`)
       .then(res => {
-        if (!res.ok) throw new Error("Failed to load data");
+        if (!res.ok) throw new Error("Failed to load PM2.5 data");
         return res.json();
       })
       .then((jsonData: PM25Data) => {
@@ -55,8 +69,11 @@ function App() {
       });
       
     // Fetch HDC Data
-    fetch('/data/hdc_consolidated.json')
-      .then(res => res.json())
+    fetch(`${dataPath}hdc_consolidated.json`)
+      .then(res => {
+        if (!res.ok) throw new Error("Failed to load HDC data");
+        return res.json();
+      })
       .then((json: HDCData) => setHdcData(json))
       .catch(err => console.error("Failed to load HDC data", err));
   }, []);
@@ -144,11 +161,10 @@ function App() {
      }
   }, [selectedStation, availableYears, heatmapYear]);
 
-  // If Region6 page is selected, render it with HDC data
+  // If Region6 page is selected
   if (currentPage === 'region6') {
     return (
       <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-16">
-        {/* Top Header */}
         <nav className="bg-white border-b border-slate-200 sticky top-0 z-20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between h-16">
@@ -180,7 +196,6 @@ function App() {
   if (currentPage === 'analysis') {
     return (
       <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-16">
-        {/* Top Header */}
         <nav className="bg-white border-b border-slate-200 sticky top-0 z-20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between h-16">
@@ -208,6 +223,42 @@ function App() {
     );
   }
 
+  // If Upload page is selected
+  if (currentPage === 'upload') {
+     return (
+        <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-16">
+           <nav className="bg-white border-b border-slate-200 sticky top-0 z-20">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                 <div className="flex justify-between h-16">
+                    <div className="flex items-center gap-2">
+                       <div className="bg-emerald-600 p-2 rounded-lg text-white">
+                          <Activity size={20} />
+                       </div>
+                       <div>
+                          <h1 className="text-xl font-bold tracking-tight text-slate-900">R6 - Data Management</h1>
+                          <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Admin Panel</p>
+                       </div>
+                    </div>
+                    {/* Back Button */}
+                    <button 
+                       onClick={() => setCurrentPage('region6')}
+                       className="text-sm text-slate-500 hover:text-slate-800"
+                    >
+                       Back to Dashboard
+                    </button>
+                 </div>
+              </div>
+           </nav>
+           
+           <UploadPage />
+           
+           <footer className="text-center text-slate-400 text-sm pb-20">
+              &copy; 2025 R6 - PM2.5 Analytics • Made by Suppasit Srisaeng with Google Antigravity
+           </footer>
+        </div>
+     );
+  }
+
   // Original "All" page content
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 pb-16">
@@ -223,7 +274,6 @@ function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-16">
-      {/* Navbar */}
       <nav className="bg-white border-b border-slate-200 sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
@@ -246,7 +296,6 @@ function App() {
         </div>
       </nav>
 
-      {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
         {/* Controls Header */}
@@ -275,7 +324,7 @@ function App() {
                 value={selectedRegion}
                 onChange={(e) => {
                     setSelectedRegion(e.target.value);
-                    setSelectedProvince('All'); // Reset province on region change explicitly
+                    setSelectedProvince('All');
                 }}
               >
                 <option value="All">All Regions</option>
@@ -354,7 +403,6 @@ function App() {
             <SeasonalChart data={stationData} stationId={selectedStation} />
           </div>
 
-          {/* Health Correlation Chart */}
           <HealthChart 
              pm25Data={stationData} 
              province={data?.metadata.stationProvinces?.[selectedStation] || 'Unknown'} 

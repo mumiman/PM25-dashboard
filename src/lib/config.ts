@@ -5,7 +5,7 @@
 
 // Detect environment and set API base URL
 export const API_BASE_URL = import.meta.env.PROD
-    ? '/r6world/api/pm'
+    ? '/api/pm'
     : '/api';
 
 /**

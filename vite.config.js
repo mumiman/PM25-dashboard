@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 // https://vitejs.dev/config/
 export default defineConfig({
-    base: '/r6world/apps/pm/',
+    base: '/pm/',
     plugins: [react()],
     resolve: {
         alias: {
@@ -12,6 +12,10 @@ export default defineConfig({
     },
     server: {
         proxy: {
+            '/api/auth': {
+                target: 'http://localhost:3006',
+                changeOrigin: true,
+            },
             '/api': {
                 target: 'http://localhost:3009',
                 changeOrigin: true,
