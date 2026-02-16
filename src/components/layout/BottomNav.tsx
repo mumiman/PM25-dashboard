@@ -1,8 +1,8 @@
 import { Home, MapPin, BarChart3 } from 'lucide-react';
 
 interface BottomNavProps {
-  currentPage: 'region6' | 'analysis' | 'all';
-  onPageChange: (page: 'region6' | 'analysis' | 'all') => void;
+  currentPage: string;
+  onPageChange: (page: any) => void;
 }
 
 export function BottomNav({ currentPage, onPageChange }: BottomNavProps) {

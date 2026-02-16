@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Calendar, Activity, LayoutDashboard, Info, MapPin, BarChart3 } from 'lucide-react';
-import { TrendChart } from '../components/TrendChart';
-import { SeasonalChart } from '../components/SeasonalChart';
-import { HealthChart, HDCData } from '../components/HealthChart';
-import { Heatmap } from '../components/Heatmap';
-import { DailyHeatmap } from '../components/DailyHeatmap';
+import { TrendChart } from '../components/charts/TrendChart';
+import { SeasonalChart } from '../components/charts/SeasonalChart';
+import { HealthChart, HDCData } from '../components/charts/HealthChart';
+import { Heatmap } from '../components/maps/Heatmap';
+import { DailyHeatmap } from '../components/maps/DailyHeatmap';
 
 // Region 6 Provinces (Thai names matching the data)
 const REGION6_PROVINCES = [
@@ -18,7 +18,7 @@ const REGION6_PROVINCES = [
   'สระแก้ว'
 ];
 
-interface PM25Data {
+export interface PM25Data {
   metadata: {
     minDate: string;
     maxDate: string;
@@ -32,45 +32,64 @@ interface PM25Data {
 
 interface Region6PageProps {
   hdcData: HDCData | null;
+  pm25Data: PM25Data | null;
+  onEnsureData?: (stations: string[]) => void;
 }
 
 type ViewMode = 'station' | 'province_avg' | 'region_avg';
 
-export function Region6Page({ hdcData }: Region6PageProps) {
-  const [data, setData] = useState<PM25Data | null>(null);
-  const [selectedProvince, setSelectedProvince] = useState<string>('Chon Buri');
+export function Region6Page({ hdcData, pm25Data: data, onEnsureData }: Region6PageProps) {
+  // const [data, setData] = useState<PM25Data | null>(null); // Prop
+  const [selectedProvince, setSelectedProvince] = useState<string>('ชลบุรี');
   const [selectedStation, setSelectedStation] = useState<string>('');
   const [viewMode, setViewMode] = useState<ViewMode>('station');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // const [loading, setLoading] = useState(true); // Parent handles this
+  // const [error, setError] = useState<string | null>(null); // Parent handles this
   const [heatmapYear, setHeatmapYear] = useState<number>(2025);
 
-  // Load data from pm25_consolidated.json
+  // Initialize selection when data loads
   useEffect(() => {
-    fetch('/data/pm25_consolidated.json')
-      .then(res => {
-        if (!res.ok) throw new Error("Failed to load PM2.5 data");
-        return res.json();
-      })
-      .then((jsonData: PM25Data) => {
-        setData(jsonData);
-        
-        // Find first station in Region 6 and selected province
-        const firstStation = jsonData.metadata.stations.find(
-          s => jsonData.metadata.stationRegions?.[s] === 'เขตสุขภาพที่ 6' &&
-               jsonData.metadata.stationProvinces?.[s] === selectedProvince
+    if (data && !selectedStation && data.metadata.stations.length > 0) {
+         // Find first station in Region 6 and selected province
+        const firstStation = data.metadata.stations.find(
+          s => data.metadata.stationRegions?.[s] === 'เขตสุขภาพที่ 6' &&
+               data.metadata.stationProvinces?.[s] === selectedProvince
         );
         if (firstStation) {
           setSelectedStation(firstStation);
         }
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error(err);
-        setError(err.message);
-        setLoading(false);
-      });
-  }, []);
+    }
+  }, [data, selectedProvince]);
+
+  // Ensure data is loaded for current view
+  useEffect(() => {
+      if (!onEnsureData || !data) return;
+
+      let stationsToLoad: string[] = [];
+
+      if (viewMode === 'station' && selectedStation) {
+          if (!data.data[selectedStation] || data.data[selectedStation].length === 0) {
+              stationsToLoad = [selectedStation];
+          }
+      } else if (viewMode === 'province_avg') {
+          // Load all stations in selected province
+          const stations = data.metadata.stations.filter(
+             s => data.metadata.stationProvinces?.[s] === selectedProvince
+          );
+          // Filter those missing data
+          stationsToLoad = stations.filter(s => !data.data[s] || data.data[s].length === 0);
+      } else if (viewMode === 'region_avg') {
+           // Load all stations in Region 6
+           const stations = data.metadata.stations.filter(
+             s => data.metadata.stationRegions?.[s] === 'เขตสุขภาพที่ 6'
+          );
+          stationsToLoad = stations.filter(s => !data.data[s] || data.data[s].length === 0);
+      }
+
+      if (stationsToLoad.length > 0) {
+          onEnsureData(stationsToLoad);
+      }
+  }, [viewMode, selectedStation, selectedProvince, data, onEnsureData]);
 
   // Filter stations by Region 6 and selected province
   const region6Stations = useMemo(() => {
@@ -98,6 +117,10 @@ export function Region6Page({ hdcData }: Region6PageProps) {
   const provinceAverageData = useMemo(() => {
     if (!data || filteredStations.length === 0) return [];
     
+    // Check if we have data for these stations before computing
+    const hasData = filteredStations.some(s => data.data[s] && data.data[s].length > 0);
+    if (!hasData) return [];
+
     const dateMap = new Map<string, number[]>();
     filteredStations.forEach(station => {
       const stationData = data.data[station] || [];
@@ -121,6 +144,9 @@ export function Region6Page({ hdcData }: Region6PageProps) {
   const regionAverageData = useMemo(() => {
     if (!data || region6Stations.length === 0) return [];
     
+    const hasData = region6Stations.some(s => data.data[s] && data.data[s].length > 0);
+    if (!hasData) return [];
+
     const dateMap = new Map<string, number[]>();
     region6Stations.forEach(station => {
       const stationData = data.data[station] || [];
@@ -148,7 +174,7 @@ export function Region6Page({ hdcData }: Region6PageProps) {
       case 'region_avg':
         return regionAverageData;
       default:
-        return data && selectedStation ? data.data[selectedStation] : [];
+        return data && selectedStation ? (data.data[selectedStation] || []) : [];
     }
   }, [viewMode, provinceAverageData, regionAverageData, data, selectedStation]);
 
@@ -181,15 +207,9 @@ export function Region6Page({ hdcData }: Region6PageProps) {
     }
   }, [selectedStation, viewMode, availableYears, heatmapYear]);
 
-  if (loading) return (
+  if (!data) return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 pb-20">
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-    </div>
-  );
-
-  if (error) return (
-    <div className="min-h-screen flex items-center justify-center bg-red-50 text-red-600 pb-20">
-      Error loading data: {error}
     </div>
   );
 

@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, Calendar, Activity, Info } from 'lucide-react';
-import { TrendChart } from './components/TrendChart';
-import { SeasonalChart } from './components/SeasonalChart';
-import { HealthChart, HDCData } from './components/HealthChart';
-import { Heatmap } from './components/Heatmap';
-import { DailyHeatmap } from './components/DailyHeatmap';
-import { StationSelector } from './components/StationSelector';
-import { BottomNav } from './components/BottomNav';
+import { LayoutDashboard, Activity } from 'lucide-react';
+import { TrendChart } from './components/charts/TrendChart';
+import { SeasonalChart } from './components/charts/SeasonalChart';
+import { HealthChart, HDCData } from './components/charts/HealthChart';
+import { Heatmap } from './components/maps/Heatmap';
+import { DailyHeatmap } from './components/maps/DailyHeatmap';
+import { StationSelector } from './components/common/StationSelector';
+import { MainLayout } from './components/layout/MainLayout';
 import { Region6Page } from './pages/Region6Page';
 import { AnalysisPage } from './pages/AnalysisPage';
 import { UploadPage } from './pages/UploadPage';
 import { AuthProvider } from './contexts/AuthContext';
+import { API_BASE_URL } from '@/lib/config';
 
 // Types matching our JSON structure
 interface PM25Data {
@@ -44,23 +45,27 @@ function Dashboard() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Use relative path which is safer for subfolder deployment
-    // "./data/..." will resolve relative to the current page /pm/
-    const dataPath = './data/';
-
-    // Fetch PM2.5 Data
-    fetch(`${dataPath}pm25_consolidated.json`)
+    // 1. Fetch Metadata (Station List & Config) first
+    fetch(`${API_BASE_URL}/data/pm25`)
       .then(res => {
-        if (!res.ok) throw new Error("Failed to load PM2.5 data");
+        if (!res.ok) throw new Error("Failed to load PM2.5 meta data");
         return res.json();
       })
       .then((jsonData: PM25Data) => {
         setData(jsonData);
-        // Default to first station or a specific one if available
-        if (jsonData.metadata.stations.length > 0) {
-          setSelectedStation(jsonData.metadata.stations[0]);
-        }
         setLoading(false);
+
+        // 2. Load default station data immediately
+        if (jsonData.metadata.stations.length > 0) {
+          // Try to pick a Region 6 station first
+          const r6Station = jsonData.metadata.stations.find(s => 
+            jsonData.metadata.stationRegions?.[s] === 'เขตสุขภาพที่ 6'
+          );
+          const defaultStation = r6Station || jsonData.metadata.stations[0];
+          
+          setSelectedStation(defaultStation);
+          fetchStationData([defaultStation]);
+        }
       })
       .catch(err => {
         console.error(err);
@@ -68,8 +73,8 @@ function Dashboard() {
         setLoading(false);
       });
       
-    // Fetch HDC Data
-    fetch(`${dataPath}hdc_consolidated.json`)
+    // Fetch HDC Data from API (Full load as it is small)
+    fetch(`${API_BASE_URL}/data/hdc`)
       .then(res => {
         if (!res.ok) throw new Error("Failed to load HDC data");
         return res.json();
@@ -78,7 +83,42 @@ function Dashboard() {
       .catch(err => console.error("Failed to load HDC data", err));
   }, []);
 
-  const stationData = data && selectedStation ? data.data[selectedStation] : [];
+  // Lazy load station data
+  const fetchStationData = async (stations: string[]) => {
+      // Filter out stations we already have data for
+      const missingStations = stations.filter(s => {
+          return !data?.data[s] || data.data[s].length === 0;
+      });
+
+      if (missingStations.length === 0) return;
+
+      // In a real optimized backend, we'd fetch multiple at once.
+      // For now, we fetch one by one or just the first one if the backend only supports one.
+      // Optimization: Fetch them in parallel
+      const promises = missingStations.map(s => 
+          fetch(`${API_BASE_URL}/data/pm25?station=${s}`).then(r => r.json())
+      );
+
+      try {
+          const results = await Promise.all(promises);
+          
+          setData(prev => {
+              if (!prev) return null; // Should not happen
+              const newData = { ...prev.data };
+              results.forEach(res => {
+                  Object.assign(newData, res.data);
+              });
+              return {
+                  ...prev,
+                  data: newData
+              };
+          });
+      } catch (err) {
+          console.error("Failed to load station data", err);
+      }
+  };
+
+  const stationData = data && selectedStation ? (data.data[selectedStation] || []) : [];
   const stationName = data?.metadata.stationNames?.[selectedStation] || selectedStation;
   const stationProvince = data?.metadata.stationProvinces?.[selectedStation] || 'Unknown';
   const stationRegion = data?.metadata.stationRegions?.[selectedStation] || 'Unknown';
@@ -132,12 +172,21 @@ function Dashboard() {
     }
   }, [selectedRegion, selectedProvince, filteredProvinces]);
 
-  // Use Effect to reset station if filtered out
+  // Use Effect to reset station if filtered out, AND fetch data for new selection
   useEffect(() => {
     if (filteredStations.length > 0 && !filteredStations.includes(selectedStation)) {
-      setSelectedStation(filteredStations[0]);
+      const newStation = filteredStations[0];
+      setSelectedStation(newStation);
+      fetchStationData([newStation]); // Fetch automatically
     }
   }, [filteredStations, selectedStation]);
+
+  // When selected station changes explicitly
+  useEffect(() => {
+      if (selectedStation) {
+          fetchStationData([selectedStation]);
+      }
+  }, [selectedStation]);
 
   // Calculate specific stats for the cards
   const currentLevel = stationData.length > 0 ? stationData[stationData.length - 1].value : 0;
@@ -164,98 +213,49 @@ function Dashboard() {
   // If Region6 page is selected
   if (currentPage === 'region6') {
     return (
-      <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-16">
-        <nav className="bg-white border-b border-slate-200 sticky top-0 z-20">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between h-16">
-              <div className="flex items-center gap-2">
-                <div className="bg-indigo-600 p-2 rounded-lg text-white">
-                  <Activity size={20} />
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold tracking-tight text-slate-900">R6 - PM2.5 Analytics</h1>
-                  <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Office of Disease Prevention and Control Region 6 Chonburi</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </nav>
-        
-        <Region6Page hdcData={hdcData} />
-        
-        <footer className="text-center text-slate-400 text-sm pb-20">
-          &copy; 2025 R6 - PM2.5 Analytics • Made by Suppasit Srisaeng with Google Antigravity
-        </footer>
-        
-        <BottomNav currentPage={currentPage} onPageChange={setCurrentPage} />
-      </div>
+      <MainLayout
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+        title="R6 - PM2.5 Analytics"
+        subtitle="Office of Disease Prevention and Control Region 6 Chonburi"
+        icon={Activity}
+        iconColorClass="bg-indigo-600"
+      >
+        <Region6Page hdcData={hdcData} pm25Data={data} onEnsureData={fetchStationData} />
+      </MainLayout>
     );
   }
 
   // If Analysis page is selected
   if (currentPage === 'analysis') {
     return (
-      <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-16">
-        <nav className="bg-white border-b border-slate-200 sticky top-0 z-20">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between h-16">
-              <div className="flex items-center gap-2">
-                <div className="bg-purple-600 p-2 rounded-lg text-white">
-                  <LayoutDashboard size={20} />
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold tracking-tight text-slate-900">R6 - Statistical Analysis</h1>
-                  <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">PM2.5 & Health Correlation Analysis</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </nav>
-        
+      <MainLayout
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+        title="R6 - Statistical Analysis"
+        subtitle="PM2.5 & Health Correlation Analysis"
+        icon={LayoutDashboard}
+        iconColorClass="bg-purple-600"
+      >
         <AnalysisPage />
-        
-        <footer className="text-center text-slate-400 text-sm pb-20">
-          &copy; 2025 R6 - PM2.5 Analytics • Made by Suppasit Srisaeng with Google Antigravity
-        </footer>
-        
-        <BottomNav currentPage={currentPage} onPageChange={setCurrentPage} />
-      </div>
+      </MainLayout>
     );
   }
 
   // If Upload page is selected
   if (currentPage === 'upload') {
      return (
-        <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-16">
-           <nav className="bg-white border-b border-slate-200 sticky top-0 z-20">
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                 <div className="flex justify-between h-16">
-                    <div className="flex items-center gap-2">
-                       <div className="bg-emerald-600 p-2 rounded-lg text-white">
-                          <Activity size={20} />
-                       </div>
-                       <div>
-                          <h1 className="text-xl font-bold tracking-tight text-slate-900">R6 - Data Management</h1>
-                          <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Admin Panel</p>
-                       </div>
-                    </div>
-                    {/* Back Button */}
-                    <button 
-                       onClick={() => setCurrentPage('region6')}
-                       className="text-sm text-slate-500 hover:text-slate-800"
-                    >
-                       Back to Dashboard
-                    </button>
-                 </div>
-              </div>
-           </nav>
-           
-           <UploadPage />
-           
-           <footer className="text-center text-slate-400 text-sm pb-20">
-              &copy; 2025 R6 - PM2.5 Analytics • Made by Suppasit Srisaeng with Google Antigravity
-           </footer>
-        </div>
+      <MainLayout
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+        title="R6 - Data Management"
+        subtitle="Admin Panel"
+        icon={Activity} // Reused Activity icon, but ideally a different one
+        iconColorClass="bg-emerald-600"
+        showBackButton={true}
+      >
+        <UploadPage />
+      </MainLayout>
      );
   }
 
@@ -273,29 +273,20 @@ function Dashboard() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-16">
-      <nav className="bg-white border-b border-slate-200 sticky top-0 z-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center gap-2">
-              <div className="bg-indigo-600 p-2 rounded-lg text-white">
-                <Activity size={20} />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold tracking-tight text-slate-900">R6 - PM2.5 Analytics</h1>
-                <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Office of Disease Prevention and Control Region 6 Chonburi</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
+    <MainLayout
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+        title="R6 - PM2.5 Analytics"
+        subtitle="Office of Disease Prevention and Control Region 6 Chonburi"
+        icon={Activity}
+        iconColorClass="bg-indigo-600"
+        rightContent={
               <div className="text-sm text-slate-500 text-right hidden sm:block">
                 <div>Data from Air4Thai กรมควบคุมมลพิษ</div>
                 <div className="text-xs">Last Updated: {data?.metadata.maxDate}</div>
               </div>
-            </div>
-          </div>
-        </div>
-      </nav>
-
+        }
+    >
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
         {/* Controls Header */}
@@ -391,7 +382,7 @@ function Dashboard() {
               <p className="text-xs text-slate-400 mt-1">Total valid records</p>
             </div>
             <div className="p-3 rounded-lg bg-purple-100 text-purple-600">
-              <Calendar size={24} />
+              <Activity size={24} />
             </div>
           </div>
         </div>
@@ -412,11 +403,11 @@ function Dashboard() {
           <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
              <div className="flex items-center justify-between mb-4">
                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                 <Calendar className="text-indigo-500" size={20} />
+                 <Activity className="text-indigo-500" size={20} />
                  Seasonality Matrix
                </h3>
                <div className="flex items-center gap-2 text-sm text-slate-500">
-                  <Info size={14} />
+                  <Activity size={14} />
                   <span>Monthly Average Concentration</span>
                </div>
             </div>
@@ -443,13 +434,8 @@ function Dashboard() {
           </div>
         </div>
         
-        <footer className="mt-12 text-center text-slate-400 text-sm pb-20">
-          &copy; 2025 R6 - PM2.5 Analytics • Made by Suppasit Srisaeng with Google Antigravity
-        </footer>
       </main>
-      
-      <BottomNav currentPage={currentPage} onPageChange={setCurrentPage} />
-    </div>
+    </MainLayout>
   );
 }
 

@@ -10,7 +10,7 @@ import {
   Legend
 } from 'recharts';
 import { format } from 'date-fns';
-import { cn } from '../lib/utils';
+import { cn } from '@/lib/utils';
 
 interface DataPoint {
   date: string;

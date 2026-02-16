@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { BarChart3, TrendingUp, AlertTriangle, RefreshCw, Clock } from 'lucide-react';
+import { BarChart3, TrendingUp, AlertTriangle, RefreshCw, Clock, Lock } from 'lucide-react';
 import { API_BASE_URL } from '@/lib/config';
+import { useAuth } from '../contexts/AuthContext';
 import {
   ComposedChart,
   Line,
@@ -62,6 +63,7 @@ interface LagCorrelation {
   lag: number;
   r: number;
   p_value: number;
+  r_squared?: number; // Added optional to match use if any
 }
 
 interface LagResult {
@@ -84,6 +86,7 @@ interface AnalysisData {
 }
 
 export function AnalysisPage() {
+  const { isAdmin } = useAuth();
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -91,6 +94,11 @@ export function AnalysisPage() {
   const [selectedTab, setSelectedTab] = useState<'correlation' | 'forecast' | 'lag' | 'threshold'>('correlation');
 
   const handleCompute = async (force: boolean = false) => {
+    if (!isAdmin) {
+      setError("เฉพาะ Admin หรือคุณ Monchaya เท่านั้นที่สามารถเริ่มการวิเคราะห์ได้");
+      return;
+    }
+
     setLoading(true);
     setError(null);
     
@@ -161,21 +169,37 @@ export function AnalysisPage() {
             {loading ? 'กำลังคำนวณ...' : 'โหลดข้อมูล'}
           </button>
           
-          <button
-            onClick={() => handleCompute(true)}
-            disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-          >
-            คำนวณใหม่
-          </button>
+          {isAdmin ? (
+            <button
+              onClick={() => handleCompute(true)}
+              disabled={loading}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            >
+              คำนวณใหม่
+            </button>
+          ) : (
+             <button
+              onClick={() => setError("เฉพาะ Admin หรือคุณ Monchaya เท่านั้นที่สามารถเริ่มการวิเคราะห์ได้")}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-400 rounded-lg cursor-not-allowed text-sm"
+              title="เฉพาะ Admin เท่านั้น"
+            >
+              <Lock size={14} />
+              คำนวณใหม่
+            </button>
+          )}
         </div>
       </div>
 
       {/* Error Display */}
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-          <strong>Error:</strong> {error}
-          <p className="text-sm mt-1">ตรวจสอบว่า Backend กำลังทำงาน: <code>cd backend && uvicorn main:app --reload</code></p>
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 flex items-center gap-2">
+            <AlertTriangle className="shrink-0" size={20} />
+            <div>
+              <strong>คำเตือน:</strong> {error}
+              {!isAdmin && error.includes('Admin') && (
+                  <p className="text-sm mt-1">กรุณาเข้าสู่ระบบด้วยบัญชีผู้ดูแลระบบเพื่อใช้งานฟังก์ชันนี้</p>
+              )}
+            </div>
         </div>
       )}
 
@@ -203,13 +227,27 @@ export function AnalysisPage() {
           <BarChart3 size={48} className="mx-auto text-slate-300 mb-4" />
           <h3 className="text-lg font-medium text-slate-700 mb-2">ยังไม่มีข้อมูลการวิเคราะห์</h3>
           <p className="text-slate-500 mb-4">กดปุ่ม "โหลดข้อมูล" เพื่อเริ่มการวิเคราะห์ทางสถิติ</p>
-          <button
-            onClick={() => handleCompute(false)}
-            disabled={loading}
-            className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-          >
-            เริ่มการวิเคราะห์
-          </button>
+          
+          {isAdmin ? (
+            <button
+               onClick={() => handleCompute(false)}
+               disabled={loading}
+               className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+            >
+               เริ่มการวิเคราะห์
+            </button>
+          ) : (
+             <div className="flex flex-col items-center gap-2">
+                <button
+                   onClick={() => setError("เฉพาะ Admin หรือคุณ Monchaya เท่านั้นที่สามารถเริ่มการวิเคราะห์ได้")}
+                   className="px-6 py-2 bg-slate-200 text-slate-500 rounded-lg hover:bg-slate-300 transition-colors flex items-center gap-2"
+                >
+                   <Lock size={16} />
+                   เริ่มการวิเคราะห์
+                </button>
+                <p className="text-xs text-red-500 mt-1">* เฉพาะ Admin เท่านั้น</p>
+             </div>
+          )}
         </div>
       ) : (
         <div className="space-y-6">

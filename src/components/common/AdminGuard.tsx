@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { ShieldAlert } from 'lucide-react';
 
 export function AdminGuard({ children }: { children: React.ReactNode }) {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AdminGuard } from '../components/AdminGuard';
+import { AdminGuard } from '../components/common/AdminGuard';
 import { Upload, FileText, CheckCircle, AlertCircle, X } from 'lucide-react';
 import { API_BASE_URL } from '../lib/config';
 
