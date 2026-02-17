@@ -1,7 +1,8 @@
 
 import { ReactNode } from 'react';
 import { BottomNav } from './BottomNav';
-import { Activity } from 'lucide-react';
+import { Activity, User, Settings, LayoutGrid } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -26,6 +27,8 @@ export function MainLayout({
     showBackButton = false,
     rightContent
 }: MainLayoutProps) {
+  const { user, logout } = useAuth();
+
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-16">
         <nav className="bg-white border-b border-slate-200 sticky top-0 z-20">
@@ -48,14 +51,50 @@ export function MainLayout({
                        Back to Dashboard
                     </button>
                )}
+            {/* Right Side Content */}
+            <div className="flex items-center gap-4">
                {rightContent && (
-                   <div className="flex items-center gap-4">
+                   <div className="hidden md:block">
                        {rightContent}
                    </div>
                )}
+               
+               {/* User Profile Section */}
+               {user && (
+                 <div className="flex items-center gap-3 pl-4 border-l border-slate-200 ml-2">
+                    <div className="flex items-center gap-2 text-slate-700">
+                        <span className="text-sm font-medium">{user.username || 'User'}</span>
+                        <User size={16} className="text-slate-400" />
+                    </div>
+                    
+                    <button 
+                      className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-colors"
+                      onClick={() => window.location.href = '/portal/profile'} // Assuming profile link
+                    >
+                      <Settings size={14} />
+                      ตั้งค่า Profile
+                    </button>
+                    
+                    <button 
+                      className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-colors"
+                      onClick={() => window.location.href = '/portal'}
+                    >
+                      <LayoutGrid size={14} />
+                      กลับหน้า Portal
+                    </button>
+
+                    <button 
+                      onClick={logout}
+                      className="px-3 py-1.5 text-sm font-medium text-white bg-slate-800 rounded-md hover:bg-slate-700 transition-colors"
+                    >
+                      ออกจากระบบ
+                    </button>
+                 </div>
+               )}
             </div>
           </div>
-        </nav>
+        </div>
+      </nav>
 
         {children}
 

@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BarChart3, TrendingUp, AlertTriangle, RefreshCw, Clock, Lock } from 'lucide-react';
 import { API_BASE_URL } from '@/lib/config';
+
 import { useAuth } from '../contexts/AuthContext';
+import { DataUpdateSection } from '../components/analysis/DataUpdateSection';
 import {
   ComposedChart,
   Line,
@@ -92,6 +94,27 @@ export function AnalysisPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedYear, setSelectedYear] = useState(2026);
   const [selectedTab, setSelectedTab] = useState<'correlation' | 'forecast' | 'lag' | 'threshold'>('correlation');
+
+  useEffect(() => {
+    fetchLatestAnalysis();
+  }, [selectedYear]);
+
+  const fetchLatestAnalysis = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/analysis/latest?year=${selectedYear}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (!data.error) {
+          setAnalysisData(data);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch analysis", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleCompute = async (force: boolean = false) => {
     if (!isAdmin) {
@@ -188,7 +211,14 @@ export function AnalysisPage() {
             </button>
           )}
         </div>
+
       </div>
+
+      {isAdmin && (
+        <div className="mb-8">
+          <DataUpdateSection />
+        </div>
+      )}
 
       {/* Error Display */}
       {error && (
