@@ -1,7 +1,7 @@
 
 import { ReactNode } from 'react';
 import { BottomNav } from './BottomNav';
-import { Activity, User, Settings, LayoutGrid } from 'lucide-react';
+import { User, Settings, LayoutGrid } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface MainLayoutProps {
@@ -22,8 +22,6 @@ export function MainLayout({
     onPageChange, 
     title, 
     subtitle, 
-    icon: Icon = Activity, 
-    iconColorClass = "bg-indigo-600", 
     showBackButton = false,
     rightContent
 }: MainLayoutProps) {
@@ -35,8 +33,8 @@ export function MainLayout({
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between h-16">
               <div className="flex items-center gap-2">
-                <div className={`${iconColorClass} p-2 rounded-lg text-white`}>
-                   <Icon size={20} />
+                <div className="p-1 rounded-lg">
+                   <img src="/pm/logo_pm.png" alt="PM2.5 Logo" className="w-10 h-10 object-contain" />
                 </div>
                 <div>
                   <h1 className="text-xl font-bold tracking-tight text-slate-900">{title}</h1>
@@ -60,7 +58,7 @@ export function MainLayout({
                )}
                
                {/* User Profile Section */}
-               {user && (
+               {user ? (
                  <div className="flex items-center gap-3 pl-4 border-l border-slate-200 ml-2">
                     <div className="flex items-center gap-2 text-slate-700">
                         <span className="text-sm font-medium">{user.username || 'User'}</span>
@@ -69,7 +67,7 @@ export function MainLayout({
                     
                     <button 
                       className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-colors"
-                      onClick={() => window.location.href = '/portal/profile'} // Assuming profile link
+                      onClick={() => window.location.href = '/portal/profile'} 
                     >
                       <Settings size={14} />
                       ตั้งค่า Profile
@@ -86,10 +84,21 @@ export function MainLayout({
                     <button 
                       onClick={logout}
                       className="px-3 py-1.5 text-sm font-medium text-white bg-slate-800 rounded-md hover:bg-slate-700 transition-colors"
+                      title="Sign Out"
                     >
-                      ออกจากระบบ
+                      <span className="sr-only">Sign Out</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-log-out"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
                     </button>
                  </div>
+               ) : (
+                  <div className="flex items-center gap-3 pl-4 border-l border-slate-200 ml-2">
+                      <button 
+                        onClick={() => window.location.href = '/portal/login'}
+                        className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition-colors shadow-sm"
+                      >
+                        เข้าสู่ระบบ
+                      </button>
+                  </div>
                )}
             </div>
           </div>

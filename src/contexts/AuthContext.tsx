@@ -72,11 +72,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     window.location.href = '/portal/login';
   };
 
-  // Admin logic: Role is 'admin' OR email is the specific one
+  // Admin logic: Role is 'admin' OR username/email is the specific one
   const isAdmin = !!user && (
     user.role === 'admin' || 
     user.email === 'monchayawarasit@gmail.com' ||
-    user.username === 'monchaya' // Fallback if username is used
+    user.username?.toLowerCase() === 'monchaya' // Fallback if username is used
   );
 
   return (
